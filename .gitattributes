@@ -3,3 +3,8 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.py text eol=lf
+*.md text eol=lf
+*.sql text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+.env.example text eol=lf

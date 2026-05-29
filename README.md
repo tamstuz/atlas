@@ -31,7 +31,7 @@ The orchestrator receives requests, creates project state, routes placeholder wo
 On Ubuntu Server 24.04:
 
 ```bash
-git clone <repo-url> ai-lab-orchestrator
+git clone https://github.com/tamstuz/atlas.git ai-lab-orchestrator
 cd ai-lab-orchestrator
 sudo ./install.sh
 ```
