@@ -1,0 +1,8 @@
+workflow:
+  - intake
+  - analyst
+  - architect
+  - developer
+  - qa
+  - final_report
+entrypoint: intake

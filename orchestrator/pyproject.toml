@@ -1,0 +1,9 @@
+[project]
+name = "ai-lab-orchestrator"
+version = "0.1.0"
+description = "AI Lab Orchestrator v0.1 scaffold"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

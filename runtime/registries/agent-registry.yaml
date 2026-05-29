@@ -1,0 +1,19 @@
+agents:
+  orchestrator:
+    role_file: /srv/ai-lab/harness/prod/roles/orchestrator.md
+    status: active
+  analyst:
+    role_file: /srv/ai-lab/harness/prod/roles/analyst.md
+    status: active
+  architect:
+    role_file: /srv/ai-lab/harness/prod/roles/architect.md
+    status: active
+  developer:
+    role_file: /srv/ai-lab/harness/prod/roles/developer.md
+    status: active
+  qa:
+    role_file: /srv/ai-lab/harness/prod/roles/qa.md
+    status: active
+  final_report:
+    role_file: /srv/ai-lab/harness/prod/roles/final-report-writer.md
+    status: active

@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+httpx
+psycopg[binary]
+langgraph
+langchain-core
+qdrant-client
+pyyaml

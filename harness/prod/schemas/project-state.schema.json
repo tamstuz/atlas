@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProjectState",
+  "type": "object",
+  "required": ["project_id", "name", "request", "status", "root_path"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "name": { "type": "string" },
+    "request": { "type": "string" },
+    "status": { "type": "string" },
+    "root_path": { "type": "string" },
+    "workspace_path": { "type": "string" }
+  }
+}

@@ -1,0 +1,7 @@
+services:
+  ai-lab-orchestrator:
+    unit: /etc/systemd/system/ai-lab-orchestrator.service
+    status: registered
+  ai-lab-worker-runner:
+    unit: /etc/systemd/system/ai-lab-worker-runner.service
+    status: registered

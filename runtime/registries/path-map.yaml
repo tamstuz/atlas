@@ -1,0 +1,7 @@
+AI_LAB_ROOT: /srv/ai-lab
+HARNESS_DIR: /srv/ai-lab/harness/prod
+SKILLS_DIR: /srv/ai-lab/skills/prod
+PROJECTS_DIR: /srv/ai-lab/projects
+RUNTIME_DIR: /srv/ai-lab/runtime
+REGISTRY_DIR: /srv/ai-lab/runtime/registries
+LOG_DIR: /srv/ai-lab/runtime/logs
