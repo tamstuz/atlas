@@ -6,4 +6,6 @@ requires-python = ">=3.11"
 dependencies = []
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".."]
+testpaths = ["tests"]
+cache_dir = "test-output/.pytest_cache"

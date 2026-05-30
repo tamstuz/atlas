@@ -1,6 +1,6 @@
 # Self-Improvement
 
-Autonomous self-improvement is not implemented in v0.1.
+Autonomous self-improvement is not implemented in v0.2.
 
 The future model is proposal-based:
 
@@ -10,4 +10,10 @@ The future model is proposal-based:
 - tests and approvals are required before promotion
 - no skill may bypass harness policy
 
-v0.1 creates the directory structure needed for this model without implementing promotion automation.
+v0.2 creates and uses workflow orchestration primitives without implementing promotion automation.
+
+Recommended v0.3 follow-up:
+
+- add a formal LangGraph PostgreSQL checkpoint saver if dependency review approves it
+- expand manual approval workflows for candidate harness or skill promotion
+- add deeper DB integration tests against PostgreSQL

@@ -2,11 +2,32 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "TaskPacket",
   "type": "object",
-  "required": ["project_id", "state", "request"],
+  "required": [
+    "project_id",
+    "task_id",
+    "role",
+    "phase",
+    "objective",
+    "input_summary",
+    "harness_files_loaded",
+    "allowed_scope",
+    "forbidden_actions",
+    "expected_output",
+    "definition_of_done",
+    "created_at"
+  ],
   "properties": {
     "project_id": { "type": "string" },
-    "state": { "type": "string" },
-    "request": { "type": "string" },
-    "notes": { "type": "array", "items": { "type": "string" } }
+    "task_id": { "type": "string" },
+    "role": { "type": "string" },
+    "phase": { "type": "string" },
+    "objective": { "type": "string" },
+    "input_summary": { "type": "string" },
+    "harness_files_loaded": { "type": "array", "items": { "type": "string" } },
+    "allowed_scope": { "type": "array", "items": { "type": "string" } },
+    "forbidden_actions": { "type": "array", "items": { "type": "string" } },
+    "expected_output": { "type": "string" },
+    "definition_of_done": { "type": "string" },
+    "created_at": { "type": "string" }
   }
 }

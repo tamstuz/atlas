@@ -60,20 +60,33 @@ require_container_running() {
 require_container_healthy_if_configured() {
   local container="$1"
   local health
+  local attempts="${2:-30}"
+  local delay="${3:-2}"
 
-  health="$(inspect_value "${container}" '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}')"
-  case "${health}" in
-    healthy)
-      echo "PASS: ${container} health is healthy."
-      ;;
-    none)
-      echo "PASS: ${container} has no Docker healthcheck configured."
-      ;;
-    *)
-      echo "FAIL: ${container} health is '${health}', expected healthy."
-      return 1
-      ;;
-  esac
+  for attempt in $(seq 1 "${attempts}"); do
+    health="$(inspect_value "${container}" '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}')"
+    case "${health}" in
+      healthy)
+        echo "PASS: ${container} health is healthy."
+        return 0
+        ;;
+      none)
+        echo "PASS: ${container} has no Docker healthcheck configured."
+        return 0
+        ;;
+      starting)
+        echo "Waiting for ${container} health (${attempt}/${attempts})..."
+        sleep "${delay}"
+        ;;
+      *)
+        echo "FAIL: ${container} health is '${health}', expected healthy."
+        return 1
+        ;;
+    esac
+  done
+
+  echo "FAIL: ${container} health is '${health}', expected healthy after ${attempts} attempts."
+  return 1
 }
 
 if [[ -f "${ENV_FILE}" ]]; then

@@ -14,8 +14,11 @@ CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'new',
+    status TEXT NOT NULL DEFAULT 'pending',
     assigned_role TEXT,
+    phase TEXT,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -100,3 +103,8 @@ CREATE TABLE IF NOT EXISTS events (
     status TEXT NOT NULL DEFAULT 'recorded',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE tasks ALTER COLUMN status SET DEFAULT 'pending';
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS phase TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;

@@ -2,10 +2,32 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "AgentResult",
   "type": "object",
-  "required": ["role", "status"],
+  "required": [
+    "project_id",
+    "task_id",
+    "role",
+    "status",
+    "summary",
+    "artifacts_created",
+    "files_read",
+    "files_written",
+    "harness_files_loaded",
+    "next_recommended_role",
+    "blockers",
+    "created_at"
+  ],
   "properties": {
+    "project_id": { "type": "string" },
+    "task_id": { "type": "string" },
     "role": { "type": "string" },
     "status": { "type": "string" },
-    "notes": { "type": "array", "items": { "type": "string" } }
+    "summary": { "type": "string" },
+    "artifacts_created": { "type": "array", "items": { "type": "string" } },
+    "files_read": { "type": "array", "items": { "type": "string" } },
+    "files_written": { "type": "array", "items": { "type": "string" } },
+    "harness_files_loaded": { "type": "array", "items": { "type": "string" } },
+    "next_recommended_role": { "type": "string" },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "created_at": { "type": "string" }
   }
 }

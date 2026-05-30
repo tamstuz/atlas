@@ -2,16 +2,21 @@
 
 AI Lab Orchestrator is a repo-based installer that turns a fresh Ubuntu Server 24.04 minimal VM into an AI Lab control plane.
 
-v0.1 provides a simple foundation:
+v0.2 provides a basic working orchestrator:
 
 - FastAPI front-door API
 - LangGraph workflow scaffold
-- PostgreSQL for project, task, run, approval, and event state
+- PostgreSQL-backed project, task, run, handoff, and event state
 - Qdrant for future semantic memory
 - production and candidate harness directories
 - production and candidate skill directories
 - runtime registries
 - project workspace creation
+- deterministic workflow run: intake -> analyst -> architect -> developer -> QA -> final report
+- harness role loading per workflow node
+- structured task packets and agent result files
+- final report generation
+- `/llm/status` external Ollama status endpoint
 - systemd service files
 - health, doctor, backup, and project creation scripts
 - optional external Ollama-compatible LLM endpoint
@@ -24,7 +29,7 @@ Ollama is not installed by this repo and may run on another server.
 User -> Front Door API -> LangGraph -> Specialist Nodes -> Harness/DB/Filesystem
 ```
 
-The orchestrator receives requests, creates project state, routes placeholder workflow nodes, and stores durable operational records. Harness and skill files live on the filesystem so future changes can be proposed under candidate directories before promotion.
+The orchestrator receives requests, creates DB-backed project and task state, routes workflow nodes, loads the active harness role files, writes handoff artifacts, and stores durable operational records. Harness and skill files live on the filesystem so future changes can be proposed under candidate directories before promotion.
 
 ## Fresh Install Quickstart
 
@@ -76,6 +81,21 @@ This creates a project folder under:
 
 with `project-state.json`, `task-board.json`, `decision-log.md`, `workspace/`, `handoffs/`, `qa/`, and `final/`.
 
+## Run the v0.2 Workflow
+
+```bash
+curl -X POST http://localhost:8088/projects/<project-id>/run
+curl http://localhost:8088/projects/<project-id>
+```
+
+The run writes:
+
+- `/srv/ai-lab/projects/<project-id>/handoffs/<step>-<role>-task-packet.yaml`
+- `/srv/ai-lab/projects/<project-id>/handoffs/<step>-<role>-agent-result.json`
+- `/srv/ai-lab/projects/<project-id>/final/final-report.md`
+
+LangGraph uses `thread_id = project_id`. v0.2 persists workflow state snapshots to PostgreSQL `events`; formal LangGraph PostgreSQL checkpoint saver integration is deferred to v0.3.
+
 ## External Ollama Configuration
 
 Set the external endpoint in `.env`:
@@ -88,11 +108,18 @@ DEFAULT_MODEL=gemma4:26b
 
 If `OLLAMA_ENABLED=false`, LLM calls are skipped. If the endpoint is unreachable, app startup still succeeds and LLM call functions return a clear error.
 
+Check status:
+
+```bash
+curl http://localhost:8088/llm/status
+```
+
 ## Known Limitations
 
-- v0.1 has no web UI.
-- v0.1 has no authentication system.
-- v0.1 does not implement autonomous self-improvement.
-- v0.1 does not implement production skill or harness promotion automation.
+- v0.2 has no web UI.
+- v0.2 has no authentication system.
+- v0.2 does not implement autonomous self-improvement.
+- v0.2 does not implement production skill or harness promotion automation.
 - The worker runner service is a placeholder.
-- The LangGraph nodes contain placeholder logic only.
+- Specialist output is deterministic placeholder content when no external LLM is available.
+- Runtime inspector creates an inspection plan only; it does not edit cron or services.

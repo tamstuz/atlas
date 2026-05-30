@@ -132,7 +132,7 @@ systemctl restart ai-lab-worker-runner.service
 
 cat <<'NEXT'
 
-AI Lab Orchestrator v0.1 install complete.
+AI Lab Orchestrator v0.2 install complete.
 
 Next commands:
   cd /srv/ai-lab
