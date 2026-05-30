@@ -51,3 +51,13 @@ wait_for_postgres
   -U "${POSTGRES_USER:-ailab}" \
   -d "${POSTGRES_DB:-ailab}" \
   -f /docker-entrypoint-initdb.d/001-init.sql
+
+for migration in db/migrations/*.sql; do
+  if [[ -f "${migration}" ]]; then
+    echo "Applying database migration: ${migration}"
+    "${DOCKER_CMD[@]}" compose --env-file .env exec -T postgres psql \
+      -U "${POSTGRES_USER:-ailab}" \
+      -d "${POSTGRES_DB:-ailab}" \
+      -f "/docker-entrypoint-initdb.d/migrations/$(basename "${migration}")"
+  fi
+done
