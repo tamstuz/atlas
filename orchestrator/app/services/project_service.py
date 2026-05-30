@@ -1,12 +1,22 @@
 import json
 import uuid
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
+
+from psycopg import Error as PsycopgError
 
 from .. import db
 from ..config import settings
 from ..schemas.project_state import ProjectCreate, ProjectRead, ProjectState, TaskSummary
-from .task_service import create_initial_tasks, get_project_tasks
+from .task_service import TASK_ROLES, get_project_tasks
+
+
+class ProjectCreationError(RuntimeError):
+    def __init__(self, message: str, project_id: str | None = None, root_path: str | None = None) -> None:
+        super().__init__(message)
+        self.project_id = project_id
+        self.root_path = root_path
 
 
 def _write_json(path: Path, data: dict) -> None:
@@ -33,6 +43,23 @@ def _task_board_payload(tasks: list[Mapping[str, object]]) -> dict:
     }
 
 
+def _failed_project_state(project_id: str, payload: ProjectCreate, root: Path, error: str) -> dict:
+    now = datetime.now(UTC).isoformat()
+    return {
+        "project_id": project_id,
+        "name": payload.name,
+        "request": payload.request,
+        "status": "failed",
+        "current_phase": "project_creation",
+        "created_at": now,
+        "updated_at": now,
+        "final_report_path": "",
+        "root_path": str(root),
+        "workspace_path": str(root / "workspace"),
+        "error": error,
+    }
+
+
 def write_project_files(project: Mapping[str, object], tasks: list[Mapping[str, object]], final_report_path: str = "") -> None:
     root = Path(str(project["root_path"]))
     state = {
@@ -52,21 +79,67 @@ def write_project_files(project: Mapping[str, object], tasks: list[Mapping[str, 
 def create_project(payload: ProjectCreate) -> ProjectState:
     project_id = str(uuid.uuid4())
     root = settings.projects_dir / project_id
-    for child in ["workspace", "handoffs", "qa", "final"]:
-        (root / child).mkdir(parents=True, exist_ok=True)
+    try:
+        for child in ["workspace", "handoffs", "qa", "final"]:
+            (root / child).mkdir(parents=True, exist_ok=True)
 
-    project = db.execute_returning(
-        """
-        INSERT INTO projects (id, name, request, root_path, status)
-        VALUES (%s, %s, %s, %s, 'new')
-        RETURNING id, name, request, status, root_path, created_at, updated_at
-        """,
-        (project_id, payload.name, payload.request, str(root)),
-    )
-    tasks = create_initial_tasks(project_id)
-    (root / "decision-log.md").write_text("# Decision Log\n\n", encoding="utf-8")
-    _append_decision(root, "Created project")
-    write_project_files(project, tasks)
+        with db.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO projects (id, name, request, root_path, status)
+                    VALUES (%s, %s, %s, %s, 'new')
+                    RETURNING id, name, request, status, root_path, created_at, updated_at
+                    """,
+                    (project_id, payload.name, payload.request, str(root)),
+                )
+                project = cur.fetchone()
+                if project is None:
+                    raise ProjectCreationError("PostgreSQL did not return the inserted project row.", project_id, str(root))
+
+                tasks = []
+                for role in TASK_ROLES:
+                    cur.execute(
+                        """
+                        INSERT INTO tasks (project_id, title, status, assigned_role, phase)
+                        VALUES (%s, %s, 'pending', %s, %s)
+                        RETURNING id, project_id, title, status, assigned_role, phase, started_at, completed_at
+                        """,
+                        (project_id, f"{role} task", role, role),
+                    )
+                    task = cur.fetchone()
+                    if task is None:
+                        raise ProjectCreationError(f"PostgreSQL did not return the inserted task row for {role}.", project_id, str(root))
+                    tasks.append(task)
+
+                (root / "decision-log.md").write_text("# Decision Log\n\n", encoding="utf-8")
+                _append_decision(root, "Created project")
+                write_project_files(project, tasks)
+    except ProjectCreationError as exc:
+        error = str(exc)
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            _write_json(root / "project-state.json", _failed_project_state(project_id, payload, root, error))
+            _write_json(root / "task-board.json", {"tasks": []})
+            if not (root / "decision-log.md").exists():
+                (root / "decision-log.md").write_text("# Decision Log\n\n", encoding="utf-8")
+            _append_decision(root, error)
+        except OSError:
+            pass
+        raise
+    except (OSError, PsycopgError, RuntimeError) as exc:
+        error = f"Project creation failed: {exc}"
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            _write_json(root / "project-state.json", _failed_project_state(project_id, payload, root, error))
+            _write_json(root / "task-board.json", {"tasks": []})
+            if not (root / "decision-log.md").exists():
+                (root / "decision-log.md").write_text("# Decision Log\n\n", encoding="utf-8")
+            _append_decision(root, error)
+        except OSError:
+            pass
+        raise ProjectCreationError(error, project_id, str(root)) from exc
+
     return ProjectState(
         project_id=project_id,
         name=payload.name,

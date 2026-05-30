@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from orchestrator.app import main
 from orchestrator.app.schemas.project_state import ProjectState
+from orchestrator.app.services.project_service import ProjectCreationError
 
 
 def test_health_endpoint():
@@ -32,6 +33,20 @@ def test_project_creation_endpoint(monkeypatch):
     response = client.post("/projects", json={"name": "demo", "request": "build a thing"})
     assert response.status_code == 200
     assert response.json()["project_id"] == "project-1"
+
+
+def test_project_creation_failure_returns_json(monkeypatch):
+    def fake_create_project(payload):
+        raise ProjectCreationError("Project creation failed: relation tasks is missing", "project-1", "/srv/ai-lab/projects/project-1")
+
+    monkeypatch.setattr(main, "create_project", fake_create_project)
+    client = TestClient(main.app)
+    response = client.post("/projects", json={"name": "demo", "request": "build a thing"})
+
+    assert response.status_code == 500
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["detail"]["project_id"] == "project-1"
+    assert "Project creation failed" in response.json()["detail"]["error"]
 
 
 def test_llm_status_disabled(monkeypatch):

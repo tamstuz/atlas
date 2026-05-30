@@ -1,13 +1,16 @@
+import logging
+
 from fastapi import FastAPI, HTTPException
 
 from . import llm
 from .config import settings
 from .db import DatabaseUnavailable
 from .schemas.project_state import ProjectCreate, ProjectRead, ProjectState
-from .services.project_service import create_project, get_project
+from .services.project_service import ProjectCreationError, create_project, get_project
 from .services.workflow_service import run_project_workflow
 
 app = FastAPI(title="AI Lab Orchestrator", version="0.2.0")
+logger = logging.getLogger(__name__)
 
 
 @app.get("/health")
@@ -25,7 +28,17 @@ def post_project(payload: ProjectCreate) -> ProjectState:
     try:
         return create_project(payload)
     except DatabaseUnavailable as exc:
+        logger.exception("Project creation failed because PostgreSQL is unavailable.")
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ProjectCreationError as exc:
+        logger.exception("Project creation failed.")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": str(exc), "project_id": exc.project_id, "root_path": exc.root_path},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected project creation failure.")
+        raise HTTPException(status_code=500, detail={"error": f"Project creation failed: {exc}"}) from exc
 
 
 @app.get("/projects/{project_id}", response_model=ProjectRead)
