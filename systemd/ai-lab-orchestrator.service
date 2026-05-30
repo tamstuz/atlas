@@ -1,0 +1,17 @@
+[Unit]
+Description=AI Lab Orchestrator API
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ai-lab
+Group=ai-lab
+WorkingDirectory=/srv/ai-lab
+EnvironmentFile=/srv/ai-lab/.env
+ExecStart=/srv/ai-lab/orchestrator/.venv/bin/uvicorn orchestrator.app.main:app --host ${AI_LAB_HOST} --port ${AI_LAB_PORT}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
