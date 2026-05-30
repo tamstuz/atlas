@@ -2,12 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ProjectState",
   "type": "object",
-  "required": ["project_id", "name", "request", "status", "root_path"],
+  "required": ["project_id", "name", "request", "status", "current_phase", "created_at", "updated_at", "final_report_path"],
   "properties": {
     "project_id": { "type": "string" },
     "name": { "type": "string" },
     "request": { "type": "string" },
-    "status": { "type": "string" },
+    "status": { "type": "string", "enum": ["new", "running", "blocked", "complete", "failed"] },
+    "current_phase": { "type": "string" },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "final_report_path": { "type": "string" },
     "root_path": { "type": "string" },
     "workspace_path": { "type": "string" }
   }
