@@ -55,6 +55,25 @@ ensure_docker_compose() {
   docker compose version
 }
 
+add_invoking_user_to_docker_group() {
+  local invoking_user="${SUDO_USER:-}"
+
+  if ! getent group docker >/dev/null; then
+    echo "Docker group does not exist yet; skipping user group membership update."
+    return
+  fi
+
+  if [[ -n "${invoking_user}" && "${invoking_user}" != "root" ]] && id "${invoking_user}" >/dev/null 2>&1; then
+    usermod -aG docker "${invoking_user}"
+    cat <<EOF
+Added ${invoking_user} to the docker group.
+Log out and back in, or reboot, before running docker as ${invoking_user} without sudo.
+EOF
+  else
+    echo "No non-root invoking user detected; Docker CLI may require sudo for normal users."
+  fi
+}
+
 if [[ "${EUID}" -ne 0 ]]; then
   echo "install.sh must run as root or with sudo."
   exit 1
@@ -72,6 +91,8 @@ echo "Installing required packages..."
 apt-get update
 apt-get install -y curl git ca-certificates python3 python3-venv python3-pip
 ensure_docker_compose
+systemctl enable --now docker
+add_invoking_user_to_docker_group
 
 if ! getent group "${AI_LAB_GROUP}" >/dev/null; then
   groupadd --system "${AI_LAB_GROUP}"
@@ -107,7 +128,7 @@ systemctl enable ai-lab-orchestrator.service ai-lab-worker-runner.service
 systemctl restart ai-lab-orchestrator.service
 systemctl restart ai-lab-worker-runner.service
 
-"${AI_LAB_ROOT}/scripts/healthcheck.sh" || true
+"${AI_LAB_ROOT}/scripts/healthcheck.sh"
 
 cat <<'NEXT'
 
