@@ -26,6 +26,19 @@ The installer:
 
 Review `/srv/ai-lab/.env` after install, especially external LLM settings.
 
+Optional per-role Ollama model settings:
+
+```env
+OLLAMA_TIMEOUT_SECONDS=10
+ANALYST_MODEL=
+ARCHITECT_MODEL=
+DEVELOPER_MODEL=
+QA_MODEL=
+FINAL_REPORT_MODEL=
+```
+
+Empty per-role values fall back to `DEFAULT_MODEL`.
+
 After install, validate the v0.2 API surface:
 
 ```bash
@@ -34,6 +47,8 @@ scripts/healthcheck.sh
 curl http://localhost:8088/health
 curl http://localhost:8088/llm/status
 ```
+
+When `OLLAMA_ENABLED=true`, `/llm/status` should report `ok` only if the configured external endpoint is reachable. When disabled or unreachable, project workflows still use deterministic fallback output.
 
 Then create and run a project:
 

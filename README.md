@@ -14,6 +14,7 @@ v0.2 provides a basic working orchestrator:
 - project workspace creation
 - deterministic workflow run: intake -> analyst -> architect -> developer -> QA -> final report
 - harness role loading per workflow node
+- optional LLM-backed specialist execution through an external Ollama-compatible endpoint
 - structured task packets and agent result files
 - final report generation
 - `/llm/status` external Ollama status endpoint
@@ -103,10 +104,18 @@ Set the external endpoint in `.env`:
 ```env
 OLLAMA_ENABLED=true
 OLLAMA_BASE_URL=http://ollama.example.local:11434
+OLLAMA_TIMEOUT_SECONDS=10
 DEFAULT_MODEL=gemma4:26b
+ANALYST_MODEL=
+ARCHITECT_MODEL=
+DEVELOPER_MODEL=
+QA_MODEL=
+FINAL_REPORT_MODEL=
 ```
 
-If `OLLAMA_ENABLED=false`, LLM calls are skipped. If the endpoint is unreachable, app startup still succeeds and LLM call functions return a clear error.
+If `OLLAMA_ENABLED=false`, LLM calls are skipped. If the endpoint is unreachable, app startup and project workflows still succeed using deterministic fallback output.
+
+When Ollama is enabled and reachable, analyst, architect, developer, QA, and final report nodes call the configured model. Empty per-role model values fall back to `DEFAULT_MODEL`.
 
 Check status:
 
@@ -122,4 +131,5 @@ curl http://localhost:8088/llm/status
 - v0.2 does not implement production skill or harness promotion automation.
 - The worker runner service is a placeholder.
 - Specialist output is deterministic placeholder content when no external LLM is available.
+- LLM prompts and responses are stored in `agent_runs` JSONB input/output fields.
 - Runtime inspector creates an inspection plan only; it does not edit cron or services.

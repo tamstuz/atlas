@@ -14,3 +14,9 @@ class AgentResult(BaseModel):
     next_recommended_role: str = ""
     blockers: list[str] = Field(default_factory=list)
     created_at: str
+    model: str = ""
+    provider: str = ""
+    llm_used: bool = False
+    fallback_used: bool = True
+    duration_ms: int = 0
+    error: str = ""

@@ -21,7 +21,13 @@ class Settings(BaseSettings):
     llm_provider: str = Field(default="ollama", alias="LLM_PROVIDER")
     ollama_enabled: bool = Field(default=True, alias="OLLAMA_ENABLED")
     ollama_base_url: str = Field(default="http://ollama.example.local:11434", alias="OLLAMA_BASE_URL")
+    ollama_timeout_seconds: float = Field(default=10.0, alias="OLLAMA_TIMEOUT_SECONDS")
     default_model: str = Field(default="gemma4:26b", alias="DEFAULT_MODEL")
+    analyst_model: str | None = Field(default=None, alias="ANALYST_MODEL")
+    architect_model: str | None = Field(default=None, alias="ARCHITECT_MODEL")
+    developer_model: str | None = Field(default=None, alias="DEVELOPER_MODEL")
+    qa_model: str | None = Field(default=None, alias="QA_MODEL")
+    final_report_model: str | None = Field(default=None, alias="FINAL_REPORT_MODEL")
 
     harness_dir: Path = Field(default=Path("/srv/ai-lab/harness/prod"), alias="HARNESS_DIR")
     skills_dir: Path = Field(default=Path("/srv/ai-lab/skills/prod"), alias="SKILLS_DIR")
@@ -30,6 +36,25 @@ class Settings(BaseSettings):
     registry_dir: Path = Field(default=Path("/srv/ai-lab/runtime/registries"), alias="REGISTRY_DIR")
     log_dir: Path = Field(default=Path("/srv/ai-lab/runtime/logs"), alias="LOG_DIR")
 
+    def model_for_role(self, role: str) -> str:
+        role_models = {
+            "analyst": self.analyst_model,
+            "architect": self.architect_model,
+            "developer": self.developer_model,
+            "qa": self.qa_model,
+            "final_report": self.final_report_model,
+        }
+        return role_models.get(role) or self.default_model
+
+    def role_models(self) -> dict[str, str]:
+        return {
+            "analyst": self.model_for_role("analyst"),
+            "architect": self.model_for_role("architect"),
+            "developer": self.model_for_role("developer"),
+            "qa": self.model_for_role("qa"),
+            "final_report": self.model_for_role("final_report"),
+        }
+
     @property
     def database_url(self) -> str:
         return (
@@ -37,7 +62,7 @@ class Settings(BaseSettings):
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
-    def safe_config(self) -> dict[str, str | int | bool]:
+    def safe_config(self) -> dict[str, object]:
         return {
             "ai_lab_root": str(self.ai_lab_root),
             "ai_lab_host": self.ai_lab_host,
@@ -49,7 +74,9 @@ class Settings(BaseSettings):
             "llm_provider": self.llm_provider,
             "ollama_enabled": self.ollama_enabled,
             "ollama_base_url": self.ollama_base_url,
+            "ollama_timeout_seconds": self.ollama_timeout_seconds,
             "default_model": self.default_model,
+            "role_models": self.role_models(),
             "harness_dir": str(self.harness_dir),
             "skills_dir": str(self.skills_dir),
             "projects_dir": str(self.projects_dir),

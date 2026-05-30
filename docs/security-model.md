@@ -13,4 +13,6 @@ External LLM endpoints are optional and should be treated as network dependencie
 
 Workflow nodes load role-specific harness files and required shared rules. They may write project-local handoff artifacts and update database state, but they may not mutate `harness/prod`, create privileged agents, install packages, or make live cron/systemd edits.
 
+v0.3 prompt assembly must include only the active node role files, required shared rules, task packet, project request, and expected output schema. It must not load unrelated harness files or authorize production harness mutation.
+
 The runtime inspector role enforces discover-before-modify behavior by generating an inspection plan. In v0.2 it does not execute shell commands or change runtime services.
