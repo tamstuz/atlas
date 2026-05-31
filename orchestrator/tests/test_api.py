@@ -167,5 +167,57 @@ def test_approvals_endpoint(monkeypatch):
     assert response.json()["approvals"][0]["approval_type"] == "modification_plan"
 
 
+def test_approval_status_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "transition_approval_status",
+        lambda project_id, approval_id, payload: {
+            "project_id": project_id,
+            "approval_id": approval_id,
+            "approval_type": "modification_plan",
+            "status": payload.status,
+            "artifact_path": "/srv/ai-lab/projects/project-1/approvals/modification-plan.md",
+            "reason": payload.reason,
+            "created_at": "now",
+            "updated_at": "now",
+        },
+    )
+    client = TestClient(main.app)
+    response = client.post(
+        "/projects/project-1/approvals/approval-1/status",
+        json={"status": "approved", "reason": "Reviewed."},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "approved"
+
+
+def test_dry_run_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "run_dry_run_validation",
+        lambda project_id, approval_id, payload: {
+            "project_id": project_id,
+            "approval_id": approval_id,
+            "status": "passed",
+            "validation_report_path": "/srv/ai-lab/projects/project-1/approvals/dry-run-validation-report.md",
+            "patch_validation_path": "/srv/ai-lab/projects/project-1/approvals/patch-validation.json",
+            "production_modified": False,
+            "global_registries_modified": False,
+            "harness_modified": False,
+            "issues": [],
+            "next_step": "Dry-run validation passed; v0.6 still does not execute changes.",
+        },
+    )
+    client = TestClient(main.app)
+    response = client.post(
+        "/projects/project-1/approvals/approval-1/dry-run",
+        json={"validation_mode": "full_dry_run"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["production_modified"] is False
+
+
 def assert_exists(root: Path, relative_path: str) -> None:
     assert (root / relative_path).exists(), relative_path

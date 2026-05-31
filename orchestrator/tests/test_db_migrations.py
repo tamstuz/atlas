@@ -24,3 +24,13 @@ def test_v05_migration_adds_approval_metadata_columns():
     assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS approval_type TEXT" in migration
     assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS artifact_path TEXT" in migration
     assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS requested_by TEXT" in migration
+
+
+def test_v06_migration_adds_dry_run_validation_columns():
+    migration = Path("../db/migrations/005-v0.6-dry-run-validation.sql").read_text(encoding="utf-8")
+    init_db = Path("../db/init.sql").read_text(encoding="utf-8")
+
+    assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS validation_status TEXT" in migration
+    assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS validation_artifact_path TEXT" in migration
+    assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS validation_status TEXT" in init_db
+    assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS validation_artifact_path TEXT" in init_db

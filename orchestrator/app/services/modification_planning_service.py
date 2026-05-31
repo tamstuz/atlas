@@ -62,9 +62,16 @@ def _plan_payload(
         "proposed_validation_steps": [
             "Review runtime inspection evidence.",
             "Review this candidate modification plan.",
-            "Do not execute changes in v0.5.",
+            "Run approved dry-run validation before any future execution workflow.",
         ],
-        "rollback_plan": "No rollback required because v0.5 does not execute or apply modifications.",
+        "rollback_plan": {
+            "files affected": [],
+            "backup strategy": "No live files are changed in v0.6; a future execution workflow must define backups before applying changes.",
+            "restore steps": "No restore is required for v0.6 dry-run validation because no patch is applied.",
+            "verification after rollback": "A future execution workflow must rerun approved validation checks after rollback.",
+            "failure trigger": "Any failed validation or human stop decision before future execution.",
+            "owner/human approval requirement": "Human approval is required before any future execution or rollback workflow.",
+        },
         "risk_rating": "high" if blockers else "medium",
         "approval_status": status,
         "approval_id": approval_id,
@@ -141,7 +148,7 @@ def _write_dry_run_patch(path: Path, blocked: bool) -> None:
             [
                 "# Candidate dry-run patch only.",
                 f"# No patch was applied; {reason}.",
-                "# v0.5 must not target harness/prod, global runtime registries, or system files for live mutation.",
+                "# v0.6 must not target harness/prod, global runtime registries, or system files for live mutation.",
                 "",
             ]
         ),
