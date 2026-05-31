@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     developer_model: str | None = Field(default=None, alias="DEVELOPER_MODEL")
     qa_model: str | None = Field(default=None, alias="QA_MODEL")
     final_report_model: str | None = Field(default=None, alias="FINAL_REPORT_MODEL")
+    runtime_inspection_commands_enabled: bool = Field(default=False, alias="RUNTIME_INSPECTION_COMMANDS_ENABLED")
 
     harness_dir: Path = Field(default=Path("/srv/ai-lab/harness/prod"), alias="HARNESS_DIR")
     skills_dir: Path = Field(default=Path("/srv/ai-lab/skills/prod"), alias="SKILLS_DIR")
@@ -82,6 +83,7 @@ class Settings(BaseSettings):
             "llm_timeout_seconds": self.effective_llm_timeout_seconds,
             "default_model": self.default_model,
             "role_models": self.role_models(),
+            "runtime_inspection_commands_enabled": self.runtime_inspection_commands_enabled,
             "harness_dir": str(self.harness_dir),
             "skills_dir": str(self.skills_dir),
             "projects_dir": str(self.projects_dir),

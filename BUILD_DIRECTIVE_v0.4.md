@@ -1,96 +1,52 @@
-# BUILD_DIRECTIVE_v0.4.md
+# AI Lab Orchestrator - v0.4 Build Directive
 
-# AI Lab Orchestrator — v0.4 Build Directive
+## Purpose
 
-## 1. Purpose
+Build v0.4 as a read-only runtime inspector and controlled execution planning release.
 
-Build v0.4 of **AI Lab Orchestrator**.
+v0.4 targets the original reliability failure this project exists to prevent: agents must not create, edit, or replace files without first proving the real runtime execution path. The runtime inspector must help map cron jobs, systemd services, scripts, Docker services, Python entrypoints, logs, config files, working directories, and verification commands before any future modification workflow is considered.
 
-v0.3 successfully added:
+This release is inspection and planning only.
 
-* live external Ollama-backed specialist execution
-* deterministic fallback when Ollama is unavailable
-* prompt assembly from harness role files and task packets
-* agent run metadata
-* model/provider/fallback tracking
-* real analyst, architect, developer, QA, and final report LLM calls
+## Scope
 
-v0.4 must focus on the original reliability failure this project is intended to solve:
+Implement only:
 
-> Agents must not guess where runtime files, cron jobs, services, scripts, or source files live.
-> They must inspect, trace, map, and prove the execution path before any modification is proposed.
+1. A project runtime-inspection endpoint.
+2. Runtime-inspector task execution.
+3. Execution-path inspection planning.
+4. Discover-before-modify enforcement for cron, service, and runtime work.
+5. Runtime-inspection artifacts under the project workspace.
+6. Runtime-inspector DB task/run/event records.
+7. Read-only shell inspection command support, disabled by default.
+8. Blocking of all modify commands.
+9. Approval gate placeholders for future modification workflows.
+10. Validation docs and tests.
 
-This release adds a **runtime inspector** and **controlled execution planning** layer.
+Do not add unrelated features.
 
-v0.4 is read-only. It must not perform live file modifications, cron edits, service edits, or sudo/root actions.
+## Hard Limits
 
----
+Do not implement:
 
-## 2. Core Goal
+1. Live file modification.
+2. Live cron editing.
+3. Live systemd editing.
+4. Service restart.
+5. Sudo-capable agents.
+6. Root-capable autonomous behavior.
+7. Package installation by agents.
+8. Self-improvement.
+9. Skill or harness promotion.
+10. Production harness mutation.
+11. Web UI.
+12. Arbitrary shell execution.
+13. Network scanning.
+14. Approval-based modification execution.
 
-Add a real runtime-inspector workflow that can:
+Approval gates in v0.4 are placeholders only. They may report that approval would be required in a future release, but they must not execute approved changes.
 
-1. inspect a project request
-2. determine whether runtime inspection is needed
-3. create a runtime-inspection task packet
-4. load runtime-inspector harness rules
-5. generate an execution-path inspection plan
-6. optionally run safe read-only inspection commands
-7. write structured runtime-inspection results
-8. update DB task/run state
-9. create/update runtime registry records where appropriate
-10. block modification until discover-before-modify requirements are satisfied
-
----
-
-## 3. Required Design Principles
-
-Follow these rules exactly:
-
-1. The orchestrator orchestrates only.
-2. The runtime inspector may inspect but must not modify.
-3. All runtime inspection must follow `discover-before-modify.md`.
-4. All filesystem references must use absolute paths.
-5. No live cron modification in v0.4.
-6. No live systemd service modification in v0.4.
-7. No sudo/root-capable autonomous agent behavior in v0.4.
-8. No autonomous self-improvement in v0.4.
-9. No web UI in v0.4.
-10. No production harness mutation.
-11. No bypassing harness policy.
-12. No arbitrary shell command execution.
-13. Only explicitly allowlisted read-only commands may run.
-14. All command output must be recorded.
-15. All runtime-inspection conclusions must include confidence and evidence.
-16. All unresolved findings must be marked as blockers or unknowns.
-
----
-
-## 4. Branch / PR Behavior
-
-Build v0.4 in a new branch.
-
-Suggested branch name:
-
-```text
-codex/v0.4-runtime-inspector
-```
-
-Open a PR linked to the v0.4 issue.
-
-The PR must include:
-
-* summary of changes
-* test commands run
-* Ubuntu validation instructions
-* known limitations
-* recommended v0.5 issues
-
-Do not merge directly to main.
-
----
-
-## 5. Required New/Updated Endpoints
+## Required Endpoint
 
 Add:
 
@@ -98,19 +54,23 @@ Add:
 POST /projects/{project_id}/runtime-inspect
 ```
 
-Behavior:
+Optional request body:
 
-* loads project from PostgreSQL
-* loads project filesystem state
-* loads runtime-inspector role file
-* loads required runtime-control harness files
-* creates or updates the `runtime_inspector` task
-* runs the runtime-inspector workflow
-* writes task packet
-* writes agent result
-* writes runtime inspection report
-* updates DB task/run state
-* returns structured JSON
+```json
+{
+  "target_type": "cron|systemd|script|docker|python|unknown",
+  "target_hint": "",
+  "allow_read_only_commands": false
+}
+```
+
+Defaults:
+
+1. `target_type`: `unknown`
+2. `target_hint`: empty string
+3. `allow_read_only_commands`: `false`
+
+Even when `allow_read_only_commands` is true, command execution must remain disabled unless the environment explicitly enables it.
 
 Required response shape:
 
@@ -128,51 +88,37 @@ Required response shape:
 }
 ```
 
-In v0.4, `safe_to_modify` should usually be `false` unless all discover-before-modify requirements are satisfied.
+In v0.4, `safe_to_modify` must default to `false`. Returning `true` is allowed only when all discover-before-modify requirements are satisfied, and even then v0.4 must not modify anything.
 
-Even if `safe_to_modify=true`, v0.4 must not perform modification.
-
----
-
-## 6. Runtime Inspector Workflow
+## Required Implementation Areas
 
 Add or update:
 
 ```text
 orchestrator/app/nodes/runtime_inspector.py
 orchestrator/app/services/runtime_inspection_service.py
+orchestrator/app/services/discovery_validator.py
+orchestrator/app/services/shell_inspection_service.py
 ```
 
-The runtime inspector should:
+The runtime inspector must:
 
-1. determine the runtime target type if possible:
+1. Load the project from PostgreSQL.
+2. Load the project filesystem state.
+3. Load runtime-inspector harness policy.
+4. Create or update the `runtime_inspector` task.
+5. Generate a runtime-inspector task packet.
+6. Generate an execution-path inspection plan.
+7. Optionally run allowlisted read-only commands.
+8. Collect structured evidence.
+9. Validate discover-before-modify completeness.
+10. Write runtime-inspection artifacts.
+11. Write DB task, run, event, and handoff records where supported.
+12. Return structured JSON.
 
-   * cron
-   * systemd service
-   * script
-   * Docker Compose service
-   * Python app
-   * unknown
+## Required Harness Files
 
-2. generate a required discovery checklist
-
-3. run only safe read-only commands where allowed
-
-4. collect evidence
-
-5. produce structured output
-
-6. write artifacts
-
-7. update DB state
-
----
-
-## 7. Required Harness Files
-
-Use existing files where possible.
-
-Must load:
+The runtime inspector must load:
 
 ```text
 harness/prod/roles/runtime-inspector.md
@@ -184,36 +130,24 @@ harness/prod/workflow-rules/handoff-policy.md
 harness/prod/workflow-rules/completion-gates.md
 ```
 
-If needed, update `runtime-inspector.md` only to clarify read-only behavior.
+Do not mutate `harness/prod`.
 
-Do not weaken existing harness policy.
+If clarification is needed, place candidate policy changes under a candidate path only. Do not promote or apply them in v0.4.
 
-Do not allow production harness mutation.
+## Discover-Before-Modify Validator
 
----
+Create a reusable validator that checks whether the inspection identified:
 
-## 8. Discover-Before-Modify Enforcement
-
-Create a reusable validator.
-
-Suggested file:
-
-```text
-orchestrator/app/services/discovery_validator.py
-```
-
-It must evaluate whether the inspection has identified:
-
-1. scheduler/source
-2. exact command
-3. runtime working directory
-4. absolute script path
-5. config files
-6. log files
-7. verification command
-8. owner/service context
-9. current observed behavior
-10. proposed next step
+1. Scheduler/source.
+2. Exact command.
+3. Runtime working directory.
+4. Absolute script path.
+5. Config files.
+6. Log files.
+7. Verification command.
+8. Owner/service context.
+9. Current observed behavior.
+10. Proposed next step.
 
 Return:
 
@@ -227,36 +161,24 @@ Return:
 }
 ```
 
-In v0.4 this validator is only for reporting and gating future modification workflows. It must not execute modifications.
+This validator is a reporting and gating mechanism only. It must not execute modifications.
 
----
+## Read-Only Shell Inspection
 
-## 9. Read-Only Shell Inspection
+Add controlled read-only inspection support.
 
-Add a controlled command runner for read-only inspection.
+Default:
 
-Suggested file:
-
-```text
-orchestrator/app/services/shell_inspection_service.py
+```env
+RUNTIME_INSPECTION_COMMANDS_ENABLED=false
 ```
 
-This service must:
+Command execution may occur only when both are true:
 
-* execute only allowlisted commands
-* reject commands not on the allowlist
-* reject shell metacharacters unless explicitly safe
-* enforce timeout
-* capture stdout/stderr/exit code
-* write command evidence to the runtime inspection report
-* never use sudo
-* never write files
-* never restart services
-* never edit cron
-* never edit systemd
-* never install packages
+1. Request body sets `allow_read_only_commands=true`.
+2. Environment sets `RUNTIME_INSPECTION_COMMANDS_ENABLED=true`.
 
-Allowed command categories for v0.4:
+Allowed command categories:
 
 ```text
 pwd
@@ -277,30 +199,21 @@ docker inspect
 journalctl -n
 ```
 
-Important:
+The shell inspection service must:
 
-* If implementing allowlisted shell execution is too risky or too large, implement a dry-run command plan instead.
-* Do not add broad shell execution.
-* Do not add arbitrary command execution.
+1. Prefer argument lists, not command strings.
+2. Reject shell metacharacters.
+3. Reject non-allowlisted commands.
+4. Reject sudo.
+5. Reject write, edit, delete, install, restart, and network-scan commands.
+6. Enforce timeouts.
+7. Bound captured output.
+8. Record skipped, rejected, completed, and failed commands as evidence.
+9. Use `shell=False` unless a tightly justified safe exception exists.
 
-Preferred v0.4 behavior:
+If safe execution is too risky, implement only dry-run command planning. Do not add broad shell execution.
 
-```text
-Default: generate inspection plan only
-Optional: execute read-only commands if explicitly enabled by env
-```
-
-Add environment variable:
-
-```env
-RUNTIME_INSPECTION_COMMANDS_ENABLED=false
-```
-
-Default must be `false`.
-
----
-
-## 10. Runtime Inspection Artifacts
+## Required Artifacts
 
 For each runtime inspection, write:
 
@@ -313,184 +226,58 @@ For each runtime inspection, write:
 
 The report must include:
 
-```text
-project id
-project name
-original request
-inspection target
-runtime target type
-commands planned
-commands executed
-evidence collected
-execution path findings
-missing discovery requirements
-safe_to_modify
-confidence
-blockers
-next recommended step
-```
+1. Project id.
+2. Project name.
+3. Original request.
+4. Inspection target.
+5. Runtime target type.
+6. Commands planned.
+7. Commands executed or skipped.
+8. Evidence collected.
+9. Execution-path findings.
+10. Missing discovery requirements.
+11. `safe_to_modify`.
+12. Confidence.
+13. Blockers.
+14. Approval gate placeholder.
+15. Next recommended step.
 
----
+## Registry Behavior
 
-## 11. Runtime Registry Updates
+Do not mutate global runtime registries in v0.4.
 
-Use existing registry files under:
-
-```text
-/srv/ai-lab/runtime/registries/
-```
-
-v0.4 may create/update:
-
-```text
-execution-map.yaml
-service-registry.yaml
-cron-registry.yaml
-```
-
-But only if the inspection evidence is strong enough.
-
-Registry updates must:
-
-* be append/update only
-* preserve existing entries
-* include project_id and timestamp
-* include evidence references
-* not overwrite unrelated records
-* not claim certainty without evidence
-
-If registry writing is risky, write candidate registry updates under the project folder instead:
+If registry updates are useful, write candidate updates only under the project workspace:
 
 ```text
 /srv/ai-lab/projects/<project-id>/qa/candidate-runtime-registry-updates.yaml
 ```
 
-Preferred v0.4 behavior:
+Candidate registry updates must be clearly marked as proposals and must not be applied automatically.
 
-```text
-Write candidate registry updates, not global registry mutations.
-```
+## Database Requirements
 
----
+Runtime-inspector runs must be tracked:
 
-## 12. Database Work
+1. `runtime_inspector` task status moves `pending -> running -> complete` or `failed`.
+2. `agent_runs` records the runtime-inspector run.
+3. `events` records runtime inspection start and completion or failure.
+4. `handoffs` records the runtime-inspection handoff if the existing schema supports it.
 
-Update DB usage so runtime-inspector runs are tracked.
+If schema changes are needed, add an idempotent migration. Do not drop data. Do not break v0.1, v0.2, or v0.3 upgrades.
 
-Required:
+## LLM Behavior
 
-* `runtime_inspector` task status updates from `pending` to `running` to `complete` or `failed`
-* `agent_runs` row written for runtime inspector
-* `events` row written for runtime inspection started/completed
-* `handoffs` row written if current schema supports it
-
-If schema changes are needed, add an idempotent migration:
-
-```text
-db/migrations/003-v0.4-runtime-inspector.sql
-```
-
-Do not drop data.
-
-Do not break v0.1, v0.2, or v0.3 upgrades.
-
----
-
-## 13. LLM Behavior
-
-The runtime inspector may use the configured LLM if available.
+The runtime inspector may use the configured LLM if available, but must work without it.
 
 If LLM is unavailable:
 
-* runtime-inspector must still produce deterministic inspection plan
-* workflow must not fail solely because Ollama is unavailable
-* fallback_used must be recorded in `agent_runs`
+1. Runtime inspection still completes with deterministic output.
+2. Workflow does not fail solely because Ollama is unavailable.
+3. Fallback usage is recorded in `agent_runs`.
 
-If LLM is available:
+The LLM must not be allowed to execute or authorize arbitrary commands. Any suggested commands must pass the read-only allowlist before execution, and execution still requires the request flag plus environment flag.
 
-* prompt must include runtime-inspector role file
-* prompt must include discover-before-modify policy
-* prompt must include absolute-path policy
-* prompt must include task packet
-* prompt must require structured output
-
-Do not allow the LLM to decide to run arbitrary commands.
-
-The LLM may suggest commands, but the command runner must enforce allowlist and read-only behavior.
-
----
-
-## 14. Runtime Inspection Request Body
-
-`POST /projects/{project_id}/runtime-inspect` may accept optional JSON:
-
-```json
-{
-  "target_type": "cron|systemd|script|docker|python|unknown",
-  "target_hint": "",
-  "allow_read_only_commands": false
-}
-```
-
-Behavior:
-
-* `target_type` defaults to `unknown`
-* `target_hint` is optional
-* `allow_read_only_commands` defaults to false
-* even if true, global env `RUNTIME_INSPECTION_COMMANDS_ENABLED` must also be true
-* if either is false, command execution is skipped and only a command plan is generated
-
----
-
-## 15. Security Requirements
-
-Hard requirements:
-
-1. No sudo.
-2. No write commands.
-3. No package installation.
-4. No service restart.
-5. No cron edit.
-6. No systemd edit.
-7. No file deletion.
-8. No network scanning.
-9. No arbitrary command string passed directly to shell.
-10. No shell=True unless heavily justified and safe.
-11. Commands must be passed as argument lists where practical.
-12. Command outputs must be bounded/truncated.
-13. Timeouts required.
-14. Any rejected command must be recorded as rejected.
-
----
-
-## 16. Required Tests
-
-Add or update tests under:
-
-```text
-orchestrator/tests/
-```
-
-Required test coverage:
-
-1. runtime-inspect endpoint exists
-2. runtime-inspect returns structured JSON
-3. runtime-inspect creates report files
-4. runtime-inspect updates runtime_inspector task status
-5. runtime-inspect writes agent_runs row
-6. discover-before-modify validator returns false when required fields are missing
-7. shell inspection service rejects non-allowlisted commands
-8. shell inspection service does not run commands by default
-9. runtime-inspect does not require live Ollama
-10. runtime-inspect does not mutate harness/prod
-
-Tests must not require live Ollama.
-
-Tests must not require real Docker/systemd availability unless mocked.
-
----
-
-## 17. Required Documentation Updates
+## Documentation Requirements
 
 Update:
 
@@ -499,7 +286,6 @@ README.md
 docs/architecture.md
 docs/operating-model.md
 docs/security-model.md
-docs/v0.4-validation.md
 ```
 
 Create:
@@ -510,21 +296,44 @@ docs/v0.4-validation.md
 
 Document:
 
-* purpose of runtime inspector
-* read-only behavior
-* discover-before-modify enforcement
-* endpoint usage
-* default command execution disabled
-* how to enable read-only inspection commands
-* validation commands
-* known limitations
-* future v0.5 modification approval workflow
+1. Runtime inspector purpose.
+2. Read-only behavior.
+3. Execution-path mapping.
+4. Discover-before-modify enforcement.
+5. Runtime-inspect endpoint usage.
+6. Command execution disabled by default.
+7. How to enable read-only inspection commands.
+8. Approval gate placeholders.
+9. Validation commands.
+10. Known limitations.
+11. Future v0.5 modification approval workflow.
 
----
+## Required Tests
 
-## 18. Required Validation Commands
+Add or update tests under:
 
-Before marking PR ready, run:
+```text
+orchestrator/tests/
+```
+
+Required coverage:
+
+1. Runtime-inspect endpoint exists.
+2. Runtime-inspect returns structured JSON.
+3. Runtime-inspect creates report files.
+4. Runtime-inspect updates runtime_inspector task status.
+5. Runtime-inspect writes an agent_runs row.
+6. Discover-before-modify validator returns false when fields are missing.
+7. Shell inspection rejects non-allowlisted commands.
+8. Shell inspection does not run commands by default.
+9. Runtime-inspect does not require live Ollama.
+10. Runtime-inspect does not mutate `harness/prod`.
+
+Tests must not require live Ollama, Docker, systemd, cron, or sudo.
+
+## Validation Before PR Ready
+
+Run:
 
 ```bash
 python -m compileall orchestrator
@@ -535,11 +344,9 @@ git diff --check origin/main...HEAD
 
 Do not claim Ubuntu install success unless actually tested on Ubuntu.
 
----
+## Manual Ubuntu Validation Before Merge
 
-## 19. Ubuntu Manual Validation Before Merge
-
-Manual Ubuntu validation must confirm:
+Manual Ubuntu validation should confirm:
 
 ```text
 PASS: sudo ./install.sh completes
@@ -547,13 +354,15 @@ PASS: scripts/healthcheck.sh exits 0
 PASS: GET /health returns ok
 PASS: POST /projects creates a project
 PASS: POST /projects/{project_id}/runtime-inspect returns structured JSON
+PASS: runtime-inspector-task-packet.yaml is created
+PASS: runtime-inspector-agent-result.json is created
 PASS: runtime-inspection-report.md is created
 PASS: runtime-inspection-evidence.json is created
 PASS: runtime_inspector task status updates
 PASS: agent_runs has runtime_inspector row
 PASS: safe_to_modify is false when discovery is incomplete
-PASS: no harness/prod files are modified
-PASS: no live cron/service modification occurs
+PASS: harness/prod files are not modified
+PASS: no live cron or service modification occurs
 PASS: no sudo commands are executed
 ```
 
@@ -561,52 +370,29 @@ Optional validation with read-only command execution enabled:
 
 ```text
 PASS: RUNTIME_INSPECTION_COMMANDS_ENABLED=true allows only allowlisted read-only commands
-PASS: rejected commands are recorded as rejected
+PASS: rejected commands are recorded
 PASS: command outputs are captured and bounded
 ```
 
----
-
-## 20. Completion Criteria
+## Completion Criteria
 
 The v0.4 PR is complete only when:
 
-1. runtime-inspect endpoint exists.
-2. runtime-inspector workflow runs.
-3. runtime-inspection task packet is written.
-4. runtime-inspection agent result is written.
-5. runtime-inspection report is written.
-6. runtime-inspection evidence JSON is written.
-7. runtime_inspector DB task is updated.
-8. agent_runs records runtime_inspector activity.
-9. discover-before-modify validator exists.
-10. shell command execution is disabled by default.
-11. if command execution exists, it is read-only and allowlisted.
-12. no production harness mutation exists.
-13. no live modification exists.
-14. tests pass.
-15. docs are updated.
+1. Runtime-inspect endpoint exists.
+2. Runtime-inspector workflow runs.
+3. Runtime-inspection task packet is written.
+4. Runtime-inspection agent result is written.
+5. Runtime-inspection report is written.
+6. Runtime-inspection evidence JSON is written.
+7. Runtime-inspector DB task is updated.
+8. `agent_runs` records runtime-inspector activity.
+9. Discover-before-modify validator exists.
+10. Shell command execution is disabled by default.
+11. Any command execution is read-only and allowlisted.
+12. Global registries are not mutated.
+13. `harness/prod` is not mutated.
+14. No live modification exists.
+15. Tests pass.
+16. Docs are updated.
 
----
-
-## 21. Do Not Do These in v0.4
-
-Do not implement:
-
-* live cron editing
-* live systemd editing
-* service restart
-* sudo/root execution
-* autonomous package install
-* autonomous file modification
-* web UI
-* authentication system
-* self-improvement workflow
-* skill creation/promotion
-* marketplace/plugin system
-* network scanning
-* arbitrary shell execution
-* multi-VM scheduling
-* approval-based modification execution
-
-v0.4 is inspection and planning only.
+v0.4 is complete when the system can prove what should be inspected before modification, not when it can modify the runtime.

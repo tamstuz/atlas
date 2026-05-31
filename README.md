@@ -2,7 +2,7 @@
 
 AI Lab Orchestrator is a repo-based installer that turns a fresh Ubuntu Server 24.04 minimal VM into an AI Lab control plane.
 
-v0.2 provides a basic working orchestrator:
+v0.4 provides a basic working orchestrator:
 
 - FastAPI front-door API
 - LangGraph workflow scaffold
@@ -21,6 +21,10 @@ v0.2 provides a basic working orchestrator:
 - systemd service files
 - health, doctor, backup, and project creation scripts
 - optional external Ollama-compatible LLM endpoint
+- read-only runtime inspection endpoint
+- execution-path mapping artifacts
+- discover-before-modify validation
+- candidate runtime registry update files only
 
 Ollama is not installed by this repo and may run on another server.
 
@@ -82,7 +86,7 @@ This creates a project folder under:
 
 with `project-state.json`, `task-board.json`, `decision-log.md`, `workspace/`, `handoffs/`, `qa/`, and `final/`.
 
-## Run the v0.2 Workflow
+## Run the Workflow
 
 ```bash
 curl -X POST http://localhost:8088/projects/<project-id>/run
@@ -95,7 +99,33 @@ The run writes:
 - `/srv/ai-lab/projects/<project-id>/handoffs/<step>-<role>-agent-result.json`
 - `/srv/ai-lab/projects/<project-id>/final/final-report.md`
 
-LangGraph uses `thread_id = project_id`. v0.2 persists workflow state snapshots to PostgreSQL `events`; formal LangGraph PostgreSQL checkpoint saver integration is deferred to v0.3.
+LangGraph uses `thread_id = project_id`. Workflow state snapshots are persisted to PostgreSQL `events`.
+
+## Runtime Inspection
+
+v0.4 adds read-only runtime inspection:
+
+```bash
+curl -X POST http://localhost:8088/projects/<project-id>/runtime-inspect \
+  -H "Content-Type: application/json" \
+  -d '{"target_type":"unknown","target_hint":"","allow_read_only_commands":false}'
+```
+
+The runtime inspector writes:
+
+- `/srv/ai-lab/projects/<project-id>/handoffs/runtime-inspector-task-packet.yaml`
+- `/srv/ai-lab/projects/<project-id>/handoffs/runtime-inspector-agent-result.json`
+- `/srv/ai-lab/projects/<project-id>/qa/runtime-inspection-report.md`
+- `/srv/ai-lab/projects/<project-id>/qa/runtime-inspection-evidence.json`
+- `/srv/ai-lab/projects/<project-id>/qa/candidate-runtime-registry-updates.yaml`
+
+Command execution is disabled by default:
+
+```env
+RUNTIME_INSPECTION_COMMANDS_ENABLED=false
+```
+
+Even when enabled, v0.4 only permits allowlisted read-only inspection commands. It does not modify files, cron, services, `harness/prod`, or global runtime registries.
 
 ## External Ollama Configuration
 
@@ -125,11 +155,11 @@ curl http://localhost:8088/llm/status
 
 ## Known Limitations
 
-- v0.2 has no web UI.
-- v0.2 has no authentication system.
-- v0.2 does not implement autonomous self-improvement.
-- v0.2 does not implement production skill or harness promotion automation.
+- v0.4 has no web UI.
+- v0.4 has no authentication system.
+- v0.4 does not implement autonomous self-improvement.
+- v0.4 does not implement production skill or harness promotion automation.
 - The worker runner service is a placeholder.
 - Specialist output is deterministic placeholder content when no external LLM is available.
 - LLM prompts and responses are stored in `agent_runs` JSONB input/output fields.
-- Runtime inspector creates an inspection plan only; it does not edit cron or services.
+- Runtime inspector creates read-only inspection artifacts only; it does not edit cron or services.

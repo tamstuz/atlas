@@ -20,6 +20,8 @@ COMMON_RULES = [
 RUNTIME_INSPECTOR_RULES = [
     "runtime-control/discover-before-modify.md",
     "runtime-control/absolute-path-policy.md",
+    "runtime-control/cron-debug-policy.md",
+    "runtime-control/service-debug-policy.md",
 ]
 
 
