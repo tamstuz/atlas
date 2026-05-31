@@ -28,6 +28,14 @@
     "harness_files_loaded": { "type": "array", "items": { "type": "string" } },
     "next_recommended_role": { "type": "string" },
     "blockers": { "type": "array", "items": { "type": "string" } },
-    "created_at": { "type": "string" }
+    "created_at": { "type": "string" },
+    "model": { "type": "string" },
+    "provider": { "type": "string" },
+    "llm_used": { "type": "boolean" },
+    "fallback_used": { "type": "boolean" },
+    "duration_ms": { "type": "integer" },
+    "endpoint": { "type": "string" },
+    "timeout_seconds": { "type": "number" },
+    "error": { "type": "string" }
   }
 }

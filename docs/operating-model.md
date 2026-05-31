@@ -19,3 +19,7 @@ intake -> analyst -> architect -> developer -> qa -> final_report
 ```
 
 The runtime inspector role exists but does not run by default. It produces an inspection plan based on runtime-control harness policy and does not perform live cron or service edits.
+
+v0.3 uses the configured external Ollama-compatible endpoint for analyst, architect, developer, QA, and final report when available. The orchestrator records the prompt, response, model, provider, timing, status, and fallback metadata in `agent_runs`.
+
+If Ollama is disabled or unreachable, the same workflow completes with deterministic fallback output.

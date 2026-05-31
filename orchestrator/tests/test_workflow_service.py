@@ -52,6 +52,11 @@ def test_workflow_run_creates_packets_results_and_final_report(monkeypatch):
     monkeypatch.setattr(workflow_service, "write_project_files", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         workflow_service,
+        "_run_specialist",
+        lambda role, bundle, packet, project: (f"{role} summary", {"fallback_used": True, "model": "test-model"}),
+    )
+    monkeypatch.setattr(
+        workflow_service,
         "load_role_bundle",
         lambda role: {"role": role, "files": [{"path": str(test_root / f"{role}.md"), "content": "role"}]},
     )

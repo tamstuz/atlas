@@ -54,7 +54,10 @@ def test_llm_status_disabled(monkeypatch):
     client = TestClient(main.app)
     response = client.get("/llm/status")
     assert response.status_code == 200
-    assert response.json() == {"enabled": False, "provider": "ollama", "status": "disabled"}
+    assert response.json()["enabled"] is False
+    assert response.json()["provider"] == "ollama"
+    assert response.json()["status"] == "disabled"
+    assert response.json()["role_models"]["analyst"] == main.llm.settings.default_model
 
 
 def test_llm_status_unreachable(monkeypatch):
@@ -64,6 +67,7 @@ def test_llm_status_unreachable(monkeypatch):
     response = client.get("/llm/status")
     assert response.status_code == 200
     assert response.json()["status"] == "unreachable"
+    assert "role_models" in response.json()
 
 
 def test_workflow_run_endpoint(monkeypatch):

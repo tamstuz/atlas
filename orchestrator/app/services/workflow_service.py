@@ -6,9 +6,12 @@ from typing import TypedDict
 from langgraph.graph import END, StateGraph
 import yaml
 
+from .. import llm
+from ..config import settings
 from ..schemas.agent_result import AgentResult
 from ..schemas.task_packet import TaskPacket
 from .harness_loader import load_role_bundle
+from .prompt_service import assemble_prompt, load_schema_text
 from .project_service import append_decision_for_project, get_project_record, update_project_status, write_project_files
 from .run_service import create_agent_run, create_handoff, record_event
 from .task_service import DEFAULT_WORKFLOW_ROLES, get_project_tasks, get_task_for_role, set_task_status
@@ -22,6 +25,7 @@ PLACEHOLDER_SUMMARIES = {
     "qa": "Placeholder QA result checked that required workflow artifacts were produced.",
     "final_report": "Final report generated with deterministic v0.2 content.",
 }
+LLM_ROLES = {"analyst", "architect", "developer", "qa", "final_report"}
 
 
 class WorkflowRunState(TypedDict):
@@ -61,13 +65,22 @@ def _packet_for(project: dict, task: dict, role: str, loaded_files: list[str]) -
     )
 
 
-def _result_for(project_id: str, task_id: str, role: str, loaded_files: list[str], next_role: str, written: list[str]) -> AgentResult:
+def _result_for(
+    project_id: str,
+    task_id: str,
+    role: str,
+    loaded_files: list[str],
+    next_role: str,
+    written: list[str],
+    summary: str,
+    llm_metadata: dict,
+) -> AgentResult:
     return AgentResult(
         project_id=project_id,
         task_id=task_id,
         role=role,
         status="complete",
-        summary=PLACEHOLDER_SUMMARIES[role],
+        summary=summary,
         artifacts_created=written,
         files_read=loaded_files,
         files_written=written,
@@ -75,7 +88,59 @@ def _result_for(project_id: str, task_id: str, role: str, loaded_files: list[str
         next_recommended_role=next_role,
         blockers=[],
         created_at=_now_iso(),
+        model=str(llm_metadata.get("model") or ""),
+        provider=str(llm_metadata.get("provider") or ""),
+        llm_used=bool(llm_metadata.get("llm_used")),
+        fallback_used=bool(llm_metadata.get("fallback_used", True)),
+        duration_ms=int(llm_metadata.get("duration_ms") or 0),
+        endpoint=str(llm_metadata.get("endpoint") or ""),
+        timeout_seconds=float(llm_metadata.get("timeout_seconds") or 0),
+        error=str(llm_metadata.get("error") or ""),
     )
+
+
+def _run_specialist(role: str, bundle: dict, packet: TaskPacket, project: dict) -> tuple[str, dict]:
+    model = settings.model_for_role(role)
+    metadata = {
+        "provider": "ollama",
+        "model": model,
+        "prompt": "",
+        "response": "",
+        "status": "fallback",
+        "duration_ms": 0,
+        "endpoint": "",
+        "timeout_seconds": settings.effective_llm_timeout_seconds,
+        "error": "",
+        "llm_used": False,
+        "fallback_used": True,
+    }
+    if role not in LLM_ROLES:
+        return PLACEHOLDER_SUMMARIES[role], metadata
+
+    schema_path = settings.harness_dir / "schemas" / "agent-result.schema.json"
+    output_schema = load_schema_text(schema_path)
+    harness_files = [
+        {"path": str(item["path"]), "content": str(item["content"])}
+        for item in bundle["files"]
+    ]
+    prompt = assemble_prompt(role, harness_files, packet, str(project["request"]), output_schema)
+    llm_result = llm.generate_sync(prompt, model)
+    metadata.update(
+        {
+            "prompt": prompt,
+            "response": llm_result.response,
+            "status": "complete" if llm_result.ok else "fallback",
+            "duration_ms": llm_result.duration_ms,
+            "endpoint": llm_result.endpoint,
+            "timeout_seconds": llm_result.timeout_seconds,
+            "error": llm_result.error,
+            "llm_used": llm_result.ok,
+            "fallback_used": not llm_result.ok,
+        }
+    )
+    if llm_result.ok and llm_result.response.strip():
+        return llm_result.response.strip(), metadata
+    return PLACEHOLDER_SUMMARIES[role], metadata
 
 
 def _write_final_report(project: dict, tasks: list[dict], artifacts: list[str]) -> str:
@@ -109,11 +174,11 @@ def _write_final_report(project: dict, tasks: list[dict], artifacts: list[str]) 
                 artifact_lines,
                 "",
                 "## Known Limitations",
-                "- v0.2 uses deterministic placeholder specialist output when no LLM endpoint is available.",
+                "- v0.3 uses deterministic specialist output when no LLM endpoint is available.",
                 "- LangGraph checkpointing is represented by persisted workflow state snapshots in PostgreSQL events.",
                 "",
                 "## Next Recommended Step",
-                "Validate this project on Ubuntu and plan formal LangGraph checkpoint saver work for v0.3.",
+                "Validate LLM-backed execution against the configured external Ollama endpoint.",
                 "",
             ]
         ),
@@ -141,11 +206,27 @@ def _execute_role(state: WorkflowRunState, role: str, step_number: int) -> Workf
 
     next_role = DEFAULT_WORKFLOW_ROLES[step_number] if step_number < len(DEFAULT_WORKFLOW_ROLES) else ""
     result_path = root / "handoffs" / f"{prefix}-agent-result.json"
-    result = _result_for(project_id, str(task["id"]), role, loaded_files, next_role, [str(packet_path), str(result_path)])
+    summary, llm_metadata = _run_specialist(role, bundle, packet, project)
+    result = _result_for(
+        project_id,
+        str(task["id"]),
+        role,
+        loaded_files,
+        next_role,
+        [str(packet_path), str(result_path)],
+        summary,
+        llm_metadata,
+    )
     result_path.write_text(json.dumps(result.model_dump(), indent=2) + "\n", encoding="utf-8")
 
     artifacts = [*state["artifacts_created"], str(packet_path), str(result_path)]
-    create_agent_run(str(task["id"]), role, "complete", packet.model_dump(), result.model_dump())
+    create_agent_run(
+        str(task["id"]),
+        role,
+        "complete",
+        {**packet.model_dump(), "llm": {"prompt": llm_metadata.get("prompt"), "model": llm_metadata.get("model"), "provider": llm_metadata.get("provider")}},
+        {**result.model_dump(), "llm": llm_metadata},
+    )
     create_handoff(str(task["id"]), state["previous_role"], next_role or "complete", packet.model_dump())
     set_task_status(str(task["id"]), "complete")
     append_decision_for_project(project_id, f"Ran {role.replace('_', ' ')}")
