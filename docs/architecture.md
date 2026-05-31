@@ -7,6 +7,7 @@ User -> Front Door API -> LangGraph -> Specialist Nodes -> Harness/DB/Filesystem
 The FastAPI service is the front door. It exposes health, safe configuration, project creation, project read, workflow run, and LLM status endpoints.
 v0.4 adds `POST /projects/{project_id}/runtime-inspect` for read-only runtime inspection.
 v0.5 adds `POST /projects/{project_id}/modification-plan` and `GET /projects/{project_id}/approvals` for approval-gated planning.
+v0.6 adds `POST /projects/{project_id}/approvals/{approval_id}/status` for human approval transitions and `POST /projects/{project_id}/approvals/{approval_id}/dry-run` for approved dry-run validation.
 
 LangGraph is the workflow layer. v0.2 runs intake, analyst, architect, developer, QA, and final report. The stable LangGraph `thread_id` is the project id.
 
@@ -29,3 +30,7 @@ The runtime inspector is a separate project action, not part of the default spec
 Runtime inspection command execution is disabled by default with `RUNTIME_INSPECTION_COMMANDS_ENABLED=false`. When enabled and requested, the shell inspection service enforces an allowlist of read-only commands and records skipped, rejected, completed, or failed command evidence. v0.4 does not mutate global runtime registries; it writes candidate registry update proposals only under the project `qa/` directory.
 
 The modification planning service reads the project-local runtime inspection evidence before generating any candidate plan. It writes approval artifacts under the project `approvals/` directory, creates an approval record in PostgreSQL, records events, and records a deterministic `modification_planner` agent run. It never executes commands, applies patches, mutates `harness/prod`, or mutates global runtime registries.
+
+The approval transition service moves approval records from `pending` or `blocked` to `approved` or `rejected`, records audit events, and does not execute anything. Blocked approvals can only become approved when the request explicitly sets `allow_blocked_approval=true`.
+
+The dry-run validation service requires an approved approval record. It reads the project-local modification plan and `dry-run.patch`, validates patch targets, classifies proposed commands without running them, checks rollback plan completeness, writes validation artifacts under the project `approvals/` directory, updates approval validation metadata, and records audit events. It does not apply patches, edit cron, edit systemd, restart services, use sudo, mutate `harness/prod`, or mutate global runtime registries.

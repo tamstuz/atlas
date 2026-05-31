@@ -31,3 +31,36 @@ def get_project_approvals(project_id: str) -> list[Mapping[str, object]]:
         """,
         (project_id,),
     )
+
+
+def get_approval_record(approval_id: str) -> Mapping[str, object] | None:
+    return db.fetch_one(
+        """
+        SELECT id, project_id, action, approval_type, status, artifact_path, requested_by, reason, created_at, updated_at
+        FROM approvals
+        WHERE id = %s
+        """,
+        (approval_id,),
+    )
+
+
+def update_approval_status(
+    approval_id: str,
+    status: str,
+    reason: str,
+    validation_status: str | None = None,
+    validation_artifact_path: str | None = None,
+) -> Mapping[str, object]:
+    return db.execute_returning(
+        """
+        UPDATE approvals
+        SET status = %s,
+            reason = %s,
+            validation_status = COALESCE(%s, validation_status),
+            validation_artifact_path = COALESCE(%s, validation_artifact_path),
+            updated_at = now()
+        WHERE id = %s
+        RETURNING id, project_id, action, approval_type, status, artifact_path, requested_by, reason, created_at, updated_at
+        """,
+        (status, reason, validation_status, validation_artifact_path, approval_id),
+    )

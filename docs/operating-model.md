@@ -55,3 +55,21 @@ Approval records are readable through:
 ```text
 GET /projects/{project_id}/approvals
 ```
+
+## v0.6 Approved Dry-Run Validation
+
+Approval status transitions are invoked explicitly:
+
+```text
+POST /projects/{project_id}/approvals/{approval_id}/status
+```
+
+Only `pending` or `blocked` approvals can transition. `pending` approvals can become `approved` or `rejected`. `blocked` approvals can become `rejected`, or can become `approved` only when the request explicitly sets `allow_blocked_approval=true`.
+
+Dry-run validation is invoked explicitly:
+
+```text
+POST /projects/{project_id}/approvals/{approval_id}/dry-run
+```
+
+The service requires approval status `approved`. It loads the approval artifacts, validates the candidate patch structure without applying it, classifies proposed commands without running them, checks rollback plan completeness, writes dry-run validation artifacts under the project `approvals/` folder, and records audit events. v0.6 still has no real execution path.

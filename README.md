@@ -2,7 +2,7 @@
 
 AI Lab Orchestrator is a repo-based installer that turns a fresh Ubuntu Server 24.04 minimal VM into an AI Lab control plane.
 
-v0.5 provides a basic working orchestrator:
+v0.6 provides a basic working orchestrator:
 
 - FastAPI front-door API
 - LangGraph workflow scaffold
@@ -27,6 +27,9 @@ v0.5 provides a basic working orchestrator:
 - candidate runtime registry update files only
 - approval-gated controlled modification planning
 - project-local candidate modification plan artifacts
+- approval status transitions for pending or blocked approval records
+- approved dry-run validation for candidate plans and patches
+- deterministic patch, command plan, and rollback plan validation without execution
 
 Ollama is not installed by this repo and may run on another server.
 
@@ -159,6 +162,28 @@ Read approval records:
 curl http://localhost:8088/projects/<project-id>/approvals
 ```
 
+## Approved Dry-Run Validation
+
+v0.6 adds approval status transitions and dry-run validation only:
+
+```bash
+curl -X POST http://localhost:8088/projects/<project-id>/approvals/<approval-id>/status \
+  -H "Content-Type: application/json" \
+  -d '{"status":"approved","reason":"Reviewed by human.","allow_blocked_approval":false}'
+
+curl -X POST http://localhost:8088/projects/<project-id>/approvals/<approval-id>/dry-run \
+  -H "Content-Type: application/json" \
+  -d '{"validation_mode":"full_dry_run"}'
+```
+
+Dry-run validation writes:
+
+- `/srv/ai-lab/projects/<project-id>/approvals/dry-run-validation-report.md`
+- `/srv/ai-lab/projects/<project-id>/approvals/dry-run-validation-result.json`
+- `/srv/ai-lab/projects/<project-id>/approvals/patch-validation.json`
+
+The validator reads the candidate plan and `dry-run.patch`, classifies proposed commands, checks rollback plan completeness, records events, and never applies patches or runs modifying commands.
+
 ## External Ollama Configuration
 
 Set the external endpoint in `.env`:
@@ -187,12 +212,12 @@ curl http://localhost:8088/llm/status
 
 ## Known Limitations
 
-- v0.5 has no web UI.
-- v0.5 has no authentication system.
-- v0.5 does not implement autonomous self-improvement.
-- v0.5 does not implement production skill or harness promotion automation.
+- v0.6 has no web UI.
+- v0.6 has no authentication system.
+- v0.6 does not implement autonomous self-improvement.
+- v0.6 does not implement production skill or harness promotion automation.
 - The worker runner service is a placeholder.
 - Specialist output is deterministic placeholder content when no external LLM is available.
 - LLM prompts and responses are stored in `agent_runs` JSONB input/output fields.
 - Runtime inspector creates read-only inspection artifacts only; it does not edit cron or services.
-- Modification planning creates candidate artifacts only; it does not apply patches, run commands, edit cron, or edit services.
+- Modification planning and dry-run validation create candidate artifacts only; they do not apply patches, run commands, edit cron, edit systemd, restart services, use sudo, mutate global registries, or mutate `harness/prod`.

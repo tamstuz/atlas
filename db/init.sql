@@ -114,4 +114,6 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 ALTER TABLE approvals ADD COLUMN IF NOT EXISTS approval_type TEXT;
 ALTER TABLE approvals ADD COLUMN IF NOT EXISTS artifact_path TEXT;
 ALTER TABLE approvals ADD COLUMN IF NOT EXISTS requested_by TEXT;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS validation_status TEXT;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS validation_artifact_path TEXT;
 UPDATE approvals SET approval_type = action WHERE approval_type IS NULL;
