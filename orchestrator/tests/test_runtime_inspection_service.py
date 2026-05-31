@@ -70,6 +70,11 @@ def test_runtime_inspection_creates_artifacts_and_records(monkeypatch):
     assert result.safe_to_modify is False
     assert statuses == ["running", "complete"]
     assert agent_runs
+    agent_output = agent_runs[0][4]
+    assert agent_output["safe_to_modify"] is False
+    assert agent_output["blockers"]
+    assert agent_output["evidence_count"] >= 3
+    assert agent_output["evidence_summary"]
     assert events[0][2] == "runtime_inspection_started"
     assert (root / "handoffs" / "runtime-inspector-task-packet.yaml").exists()
     assert (root / "handoffs" / "runtime-inspector-agent-result.json").exists()

@@ -251,12 +251,21 @@ def run_runtime_inspection(project_id: str, request: RuntimeInspectRequest | Non
         written = [str(packet_path), str(result_path), str(report_path), str(evidence_path), str(candidate_registry_path)]
         result = _result_for(project_id, str(task["id"]), loaded_files, written, summary, blockers)
         _write_json(result_path, result.model_dump())
+        agent_output = {
+            **result.model_dump(),
+            "safe_to_modify": bool(validation["safe_to_modify"]),
+            "blockers": blockers,
+            "evidence_path": str(evidence_path),
+            "evidence_count": len(evidence),
+            "evidence_summary": [str(item.get("summary") or item.get("command") or item.get("kind")) for item in evidence],
+            "validation": validation,
+        }
         create_agent_run(
             str(task["id"]),
             RUNTIME_ROLE,
             "complete",
             {**packet.model_dump(), "request": payload.model_dump(), "command_plan": command_plan},
-            {**result.model_dump(), "evidence_path": str(evidence_path), "validation": validation},
+            agent_output,
         )
         create_handoff(str(task["id"]), "runtime_inspection_request", "approval_gate_placeholder", packet.model_dump())
         set_task_status(str(task["id"]), "complete")
