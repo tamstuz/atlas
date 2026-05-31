@@ -18,3 +18,5 @@ v0.3 prompt assembly must include only the active node role files, required shar
 The runtime inspector role enforces discover-before-modify behavior by generating read-only inspection artifacts. In v0.4 it may plan read-only shell commands and, when both the request and environment allow it, execute only allowlisted read-only commands. Command execution is disabled by default.
 
 v0.4 explicitly forbids live file modification, cron edits, systemd edits, service restarts, sudo-capable agents, self-improvement, web UI work, `harness/prod` mutation, and global runtime registry mutation. Candidate runtime registry updates may be written only under `/srv/ai-lab/projects/<project-id>/qa/candidate-runtime-registry-updates.yaml`.
+
+v0.5 keeps those boundaries and adds approval-gated planning only. Candidate modification plans, dry-run patch placeholders, and approval requests are written only under `/srv/ai-lab/projects/<project-id>/approvals/`. v0.5 does not apply patches, execute commands, approve changes, edit cron, edit systemd, restart services, mutate `harness/prod`, or mutate global runtime registries.

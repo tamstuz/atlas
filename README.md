@@ -2,7 +2,7 @@
 
 AI Lab Orchestrator is a repo-based installer that turns a fresh Ubuntu Server 24.04 minimal VM into an AI Lab control plane.
 
-v0.4 provides a basic working orchestrator:
+v0.5 provides a basic working orchestrator:
 
 - FastAPI front-door API
 - LangGraph workflow scaffold
@@ -25,6 +25,8 @@ v0.4 provides a basic working orchestrator:
 - execution-path mapping artifacts
 - discover-before-modify validation
 - candidate runtime registry update files only
+- approval-gated controlled modification planning
+- project-local candidate modification plan artifacts
 
 Ollama is not installed by this repo and may run on another server.
 
@@ -127,6 +129,36 @@ RUNTIME_INSPECTION_COMMANDS_ENABLED=false
 
 Even when enabled, v0.4 only permits allowlisted read-only inspection commands. It does not modify files, cron, services, `harness/prod`, or global runtime registries.
 
+## Controlled Modification Planning
+
+v0.5 adds approval-gated planning only:
+
+```bash
+curl -X POST http://localhost:8088/projects/<project-id>/modification-plan \
+  -H "Content-Type: application/json" \
+  -d '{"change_request":"Update the service command","target_type":"systemd","target_hint":"example.service","allow_plan_with_blockers":false}'
+```
+
+If runtime inspection evidence is missing or incomplete, the response is blocked and explains the blockers. If planning is allowed, the plan remains pending human approval. v0.5 never executes the plan.
+
+Planning artifacts are written under:
+
+- `/srv/ai-lab/projects/<project-id>/approvals/modification-plan.md`
+- `/srv/ai-lab/projects/<project-id>/approvals/modification-plan.json`
+- `/srv/ai-lab/projects/<project-id>/approvals/dry-run.patch`
+- `/srv/ai-lab/projects/<project-id>/approvals/approval-request.json`
+
+Blocked requests write:
+
+- `/srv/ai-lab/projects/<project-id>/approvals/blocked-modification-plan.md`
+- `/srv/ai-lab/projects/<project-id>/approvals/blocked-modification-plan.json`
+
+Read approval records:
+
+```bash
+curl http://localhost:8088/projects/<project-id>/approvals
+```
+
 ## External Ollama Configuration
 
 Set the external endpoint in `.env`:
@@ -155,11 +187,12 @@ curl http://localhost:8088/llm/status
 
 ## Known Limitations
 
-- v0.4 has no web UI.
-- v0.4 has no authentication system.
-- v0.4 does not implement autonomous self-improvement.
-- v0.4 does not implement production skill or harness promotion automation.
+- v0.5 has no web UI.
+- v0.5 has no authentication system.
+- v0.5 does not implement autonomous self-improvement.
+- v0.5 does not implement production skill or harness promotion automation.
 - The worker runner service is a placeholder.
 - Specialist output is deterministic placeholder content when no external LLM is available.
 - LLM prompts and responses are stored in `agent_runs` JSONB input/output fields.
 - Runtime inspector creates read-only inspection artifacts only; it does not edit cron or services.
+- Modification planning creates candidate artifacts only; it does not apply patches, run commands, edit cron, or edit services.

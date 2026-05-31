@@ -16,3 +16,11 @@ def test_init_db_runs_migration_directory():
 
     assert "db/migrations/*.sql" in init_db
     assert "/docker-entrypoint-initdb.d/migrations/$(basename" in init_db
+
+
+def test_v05_migration_adds_approval_metadata_columns():
+    migration = Path("../db/migrations/004-v0.5-approval-gated-planning.sql").read_text(encoding="utf-8")
+
+    assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS approval_type TEXT" in migration
+    assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS artifact_path TEXT" in migration
+    assert "ALTER TABLE approvals ADD COLUMN IF NOT EXISTS requested_by TEXT" in migration

@@ -37,3 +37,21 @@ The runtime inspector maps execution paths and validates discover-before-modify 
 Command execution is disabled by default. Operators may set `RUNTIME_INSPECTION_COMMANDS_ENABLED=true`, but commands still run only when the request also sets `allow_read_only_commands=true`. The command runner permits only allowlisted read-only inspection commands and records rejected commands as evidence.
 
 v0.4 approval gates are placeholders only. They indicate that a future modification workflow would require explicit approval after discovery is complete. They do not execute changes.
+
+## v0.5 Controlled Modification Planning
+
+Controlled modification planning is invoked explicitly:
+
+```text
+POST /projects/{project_id}/modification-plan
+```
+
+The service requires runtime inspection evidence from the project `qa/` folder. If evidence is missing, or if `safe_to_modify=false` and `allow_plan_with_blockers=false`, the response is `blocked` and blocked plan artifacts are still written for auditability.
+
+When planning is allowed, v0.5 writes project-local candidate plan artifacts under `approvals/` and creates a PostgreSQL approval record with status `pending`. The human approval gate is a placeholder only; v0.5 has no approve or execute endpoint.
+
+Approval records are readable through:
+
+```text
+GET /projects/{project_id}/approvals
+```

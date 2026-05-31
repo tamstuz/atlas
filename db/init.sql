@@ -50,7 +50,10 @@ CREATE TABLE IF NOT EXISTS approvals (
     project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
     action TEXT NOT NULL,
+    approval_type TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
+    artifact_path TEXT,
+    requested_by TEXT,
     reason TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -108,3 +111,7 @@ ALTER TABLE tasks ALTER COLUMN status SET DEFAULT 'pending';
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS phase TEXT;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS approval_type TEXT;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS artifact_path TEXT;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS requested_by TEXT;
+UPDATE approvals SET approval_type = action WHERE approval_type IS NULL;
