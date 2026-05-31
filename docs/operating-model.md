@@ -23,3 +23,17 @@ The runtime inspector role exists but does not run by default. It produces an in
 v0.3 uses the configured external Ollama-compatible endpoint for analyst, architect, developer, QA, and final report when available. The orchestrator records the prompt, response, model, provider, timing, status, and fallback metadata in `agent_runs`.
 
 If Ollama is disabled or unreachable, the same workflow completes with deterministic fallback output.
+
+## v0.4 Runtime Inspection
+
+Runtime inspection is invoked explicitly:
+
+```text
+POST /projects/{project_id}/runtime-inspect
+```
+
+The runtime inspector maps execution paths and validates discover-before-modify readiness. It writes a task packet, agent result, inspection report, evidence JSON, and candidate registry update proposal under the project directory.
+
+Command execution is disabled by default. Operators may set `RUNTIME_INSPECTION_COMMANDS_ENABLED=true`, but commands still run only when the request also sets `allow_read_only_commands=true`. The command runner permits only allowlisted read-only inspection commands and records rejected commands as evidence.
+
+v0.4 approval gates are placeholders only. They indicate that a future modification workflow would require explicit approval after discovery is complete. They do not execute changes.

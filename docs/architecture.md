@@ -5,6 +5,7 @@ User -> Front Door API -> LangGraph -> Specialist Nodes -> Harness/DB/Filesystem
 ```
 
 The FastAPI service is the front door. It exposes health, safe configuration, project creation, project read, workflow run, and LLM status endpoints.
+v0.4 adds `POST /projects/{project_id}/runtime-inspect` for read-only runtime inspection.
 
 LangGraph is the workflow layer. v0.2 runs intake, analyst, architect, developer, QA, and final report. The stable LangGraph `thread_id` is the project id.
 
@@ -21,3 +22,7 @@ Filesystem and Git hold harness files, skills, project artifacts, reports, and r
 Each workflow node loads only its role file and required shared rules from `HARNESS_DIR`, then writes a task packet YAML and agent result JSON under the project `handoffs/` directory. The final report is written to `final/final-report.md`.
 
 LLM prompts, responses, model names, provider, timing, status, errors, and fallback metadata are stored in `agent_runs` JSONB fields.
+
+The runtime inspector is a separate project action, not part of the default specialist workflow. It loads runtime-inspector harness policy, creates a runtime-inspector task packet, maps execution-path evidence, validates discover-before-modify requirements, and writes project-local artifacts under `handoffs/` and `qa/`.
+
+Runtime inspection command execution is disabled by default with `RUNTIME_INSPECTION_COMMANDS_ENABLED=false`. When enabled and requested, the shell inspection service enforces an allowlist of read-only commands and records skipped, rejected, completed, or failed command evidence. v0.4 does not mutate global runtime registries; it writes candidate registry update proposals only under the project `qa/` directory.

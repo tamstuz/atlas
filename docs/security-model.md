@@ -15,4 +15,6 @@ Workflow nodes load role-specific harness files and required shared rules. They 
 
 v0.3 prompt assembly must include only the active node role files, required shared rules, task packet, project request, and expected output schema. It must not load unrelated harness files or authorize production harness mutation.
 
-The runtime inspector role enforces discover-before-modify behavior by generating an inspection plan. In v0.2 it does not execute shell commands or change runtime services.
+The runtime inspector role enforces discover-before-modify behavior by generating read-only inspection artifacts. In v0.4 it may plan read-only shell commands and, when both the request and environment allow it, execute only allowlisted read-only commands. Command execution is disabled by default.
+
+v0.4 explicitly forbids live file modification, cron edits, systemd edits, service restarts, sudo-capable agents, self-improvement, web UI work, `harness/prod` mutation, and global runtime registry mutation. Candidate runtime registry updates may be written only under `/srv/ai-lab/projects/<project-id>/qa/candidate-runtime-registry-updates.yaml`.

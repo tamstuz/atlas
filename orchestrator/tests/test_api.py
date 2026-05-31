@@ -89,5 +89,31 @@ def test_workflow_run_endpoint(monkeypatch):
     assert response.json()["status"] == "complete"
 
 
+def test_runtime_inspect_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "run_runtime_inspection",
+        lambda project_id, payload: {
+            "project_id": project_id,
+            "status": "complete",
+            "runtime_inspection_report_path": "/srv/ai-lab/projects/project-1/qa/runtime-inspection-report.md",
+            "task_packet_path": "/srv/ai-lab/projects/project-1/handoffs/runtime-inspector-task-packet.yaml",
+            "agent_result_path": "/srv/ai-lab/projects/project-1/handoffs/runtime-inspector-agent-result.json",
+            "inspection_summary": "Runtime inspection completed in read-only mode.",
+            "blockers": ["Exact command"],
+            "evidence": [{"kind": "project"}],
+            "safe_to_modify": False,
+        },
+    )
+    client = TestClient(main.app)
+    response = client.post("/projects/project-1/runtime-inspect", json={"target_type": "unknown"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["project_id"] == "project-1"
+    assert payload["safe_to_modify"] is False
+    assert payload["runtime_inspection_report_path"].endswith("runtime-inspection-report.md")
+
+
 def assert_exists(root: Path, relative_path: str) -> None:
     assert (root / relative_path).exists(), relative_path
