@@ -34,6 +34,8 @@
     "llm_used": { "type": "boolean" },
     "fallback_used": { "type": "boolean" },
     "duration_ms": { "type": "integer" },
+    "endpoint": { "type": "string" },
+    "timeout_seconds": { "type": "number" },
     "error": { "type": "string" }
   }
 }

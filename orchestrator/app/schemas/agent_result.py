@@ -19,4 +19,6 @@ class AgentResult(BaseModel):
     llm_used: bool = False
     fallback_used: bool = True
     duration_ms: int = 0
+    endpoint: str = ""
+    timeout_seconds: float = 0
     error: str = ""

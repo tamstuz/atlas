@@ -104,7 +104,7 @@ Set the external endpoint in `.env`:
 ```env
 OLLAMA_ENABLED=true
 OLLAMA_BASE_URL=http://ollama.example.local:11434
-OLLAMA_TIMEOUT_SECONDS=10
+LLM_TIMEOUT_SECONDS=120
 DEFAULT_MODEL=gemma4:26b
 ANALYST_MODEL=
 ARCHITECT_MODEL=

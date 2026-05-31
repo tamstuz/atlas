@@ -93,6 +93,8 @@ def _result_for(
         llm_used=bool(llm_metadata.get("llm_used")),
         fallback_used=bool(llm_metadata.get("fallback_used", True)),
         duration_ms=int(llm_metadata.get("duration_ms") or 0),
+        endpoint=str(llm_metadata.get("endpoint") or ""),
+        timeout_seconds=float(llm_metadata.get("timeout_seconds") or 0),
         error=str(llm_metadata.get("error") or ""),
     )
 
@@ -106,6 +108,8 @@ def _run_specialist(role: str, bundle: dict, packet: TaskPacket, project: dict) 
         "response": "",
         "status": "fallback",
         "duration_ms": 0,
+        "endpoint": "",
+        "timeout_seconds": settings.effective_llm_timeout_seconds,
         "error": "",
         "llm_used": False,
         "fallback_used": True,
@@ -127,6 +131,8 @@ def _run_specialist(role: str, bundle: dict, packet: TaskPacket, project: dict) 
             "response": llm_result.response,
             "status": "complete" if llm_result.ok else "fallback",
             "duration_ms": llm_result.duration_ms,
+            "endpoint": llm_result.endpoint,
+            "timeout_seconds": llm_result.timeout_seconds,
             "error": llm_result.error,
             "llm_used": llm_result.ok,
             "fallback_used": not llm_result.ok,

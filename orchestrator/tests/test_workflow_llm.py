@@ -32,6 +32,8 @@ def test_specialist_uses_mocked_llm_response(monkeypatch, tmp_path):
         model = "analyst-model"
         provider = "ollama"
         duration_ms = 42
+        endpoint = "http://ollama.example.local:11434/api/generate"
+        timeout_seconds = 120.0
         error = ""
 
     seen = {}
@@ -54,6 +56,8 @@ def test_specialist_uses_mocked_llm_response(monkeypatch, tmp_path):
     assert metadata["llm_used"] is True
     assert metadata["fallback_used"] is False
     assert metadata["model"] == "analyst-model"
+    assert metadata["endpoint"] == "http://ollama.example.local:11434/api/generate"
+    assert metadata["timeout_seconds"] == 120.0
     assert "Role instructions" in seen["prompt"]
     assert seen["model"] == "analyst-model"
 
@@ -70,6 +74,8 @@ def test_specialist_falls_back_when_llm_fails(monkeypatch, tmp_path):
         model = "default-model"
         provider = "ollama"
         duration_ms = 7
+        endpoint = "http://ollama.example.local:11434/api/generate"
+        timeout_seconds = 120.0
         error = "connection failed"
 
     monkeypatch.setattr(workflow_service.llm, "generate_sync", lambda prompt, model: Result())
@@ -85,3 +91,4 @@ def test_specialist_falls_back_when_llm_fails(monkeypatch, tmp_path):
     assert metadata["llm_used"] is False
     assert metadata["fallback_used"] is True
     assert metadata["error"] == "connection failed"
+    assert metadata["endpoint"] == "http://ollama.example.local:11434/api/generate"

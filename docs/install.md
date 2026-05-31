@@ -29,7 +29,7 @@ Review `/srv/ai-lab/.env` after install, especially external LLM settings.
 Optional per-role Ollama model settings:
 
 ```env
-OLLAMA_TIMEOUT_SECONDS=10
+LLM_TIMEOUT_SECONDS=120
 ANALYST_MODEL=
 ARCHITECT_MODEL=
 DEVELOPER_MODEL=

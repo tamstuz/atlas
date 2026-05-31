@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     llm_provider: str = Field(default="ollama", alias="LLM_PROVIDER")
     ollama_enabled: bool = Field(default=True, alias="OLLAMA_ENABLED")
     ollama_base_url: str = Field(default="http://ollama.example.local:11434", alias="OLLAMA_BASE_URL")
-    ollama_timeout_seconds: float = Field(default=10.0, alias="OLLAMA_TIMEOUT_SECONDS")
+    llm_timeout_seconds: float = Field(default=120.0, alias="LLM_TIMEOUT_SECONDS")
+    ollama_timeout_seconds: float | None = Field(default=None, alias="OLLAMA_TIMEOUT_SECONDS")
     default_model: str = Field(default="gemma4:26b", alias="DEFAULT_MODEL")
     analyst_model: str | None = Field(default=None, alias="ANALYST_MODEL")
     architect_model: str | None = Field(default=None, alias="ARCHITECT_MODEL")
@@ -56,6 +57,10 @@ class Settings(BaseSettings):
         }
 
     @property
+    def effective_llm_timeout_seconds(self) -> float:
+        return self.ollama_timeout_seconds or self.llm_timeout_seconds
+
+    @property
     def database_url(self) -> str:
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
@@ -74,7 +79,7 @@ class Settings(BaseSettings):
             "llm_provider": self.llm_provider,
             "ollama_enabled": self.ollama_enabled,
             "ollama_base_url": self.ollama_base_url,
-            "ollama_timeout_seconds": self.ollama_timeout_seconds,
+            "llm_timeout_seconds": self.effective_llm_timeout_seconds,
             "default_model": self.default_model,
             "role_models": self.role_models(),
             "harness_dir": str(self.harness_dir),
