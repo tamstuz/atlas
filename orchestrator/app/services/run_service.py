@@ -5,7 +5,7 @@ from psycopg.types.json import Jsonb
 from .. import db
 
 
-def create_agent_run(task_id: str, role: str, status: str, input_data: dict, output_data: dict) -> Mapping[str, object]:
+def create_agent_run(task_id: str | None, role: str, status: str, input_data: dict, output_data: dict) -> Mapping[str, object]:
     return db.execute_returning(
         """
         INSERT INTO agent_runs (task_id, agent_role, status, input, output)

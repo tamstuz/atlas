@@ -5,13 +5,15 @@ from fastapi import FastAPI, HTTPException
 from . import llm
 from .config import settings
 from .db import DatabaseUnavailable
+from .schemas.modification_plan import ApprovalsResponse, ModificationPlanRequest, ModificationPlanResponse
 from .schemas.project_state import ProjectCreate, ProjectRead, ProjectState
 from .schemas.runtime_inspection import RuntimeInspectRequest, RuntimeInspectResponse
 from .services.project_service import ProjectCreationError, create_project, get_project
+from .services.modification_planning_service import create_modification_plan, list_project_approvals
 from .services.runtime_inspection_service import run_runtime_inspection
 from .services.workflow_service import run_project_workflow
 
-app = FastAPI(title="AI Lab Orchestrator", version="0.4.0")
+app = FastAPI(title="AI Lab Orchestrator", version="0.5.0")
 logger = logging.getLogger(__name__)
 
 
@@ -79,6 +81,31 @@ def runtime_inspect(project_id: str, payload: RuntimeInspectRequest | None = Non
     except Exception as exc:
         logger.exception("Runtime inspection failed.")
         raise HTTPException(status_code=500, detail={"error": f"Runtime inspection failed: {exc}"}) from exc
+
+
+@app.post("/projects/{project_id}/modification-plan", response_model=ModificationPlanResponse)
+def modification_plan(project_id: str, payload: ModificationPlanRequest) -> ModificationPlanResponse:
+    try:
+        return create_modification_plan(project_id, payload)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Project not found") from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except DatabaseUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Modification planning failed.")
+        raise HTTPException(status_code=500, detail={"error": f"Modification planning failed: {exc}"}) from exc
+
+
+@app.get("/projects/{project_id}/approvals", response_model=ApprovalsResponse)
+def get_approvals(project_id: str) -> ApprovalsResponse:
+    try:
+        return list_project_approvals(project_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Project not found") from exc
+    except DatabaseUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/llm/status")

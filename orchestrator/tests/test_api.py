@@ -115,5 +115,57 @@ def test_runtime_inspect_endpoint(monkeypatch):
     assert payload["runtime_inspection_report_path"].endswith("runtime-inspection-report.md")
 
 
+def test_modification_plan_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "create_modification_plan",
+        lambda project_id, payload: {
+            "project_id": project_id,
+            "status": "blocked",
+            "approval_id": "approval-1",
+            "safe_to_modify": False,
+            "plan_path": "/srv/ai-lab/projects/project-1/approvals/blocked-modification-plan.md",
+            "dry_run_patch_path": "/srv/ai-lab/projects/project-1/approvals/dry-run.patch",
+            "approval_required": True,
+            "blockers": ["Runtime inspection evidence is missing."],
+            "next_step": "Complete runtime inspection blockers before requesting a modification plan.",
+        },
+    )
+    client = TestClient(main.app)
+    response = client.post(
+        "/projects/project-1/modification-plan",
+        json={"change_request": "Update service", "target_type": "systemd"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "blocked"
+    assert response.json()["approval_required"] is True
+
+
+def test_approvals_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "list_project_approvals",
+        lambda project_id: {
+            "project_id": project_id,
+            "approvals": [
+                {
+                    "approval_id": "approval-1",
+                    "approval_type": "modification_plan",
+                    "status": "blocked",
+                    "artifact_path": "/srv/ai-lab/projects/project-1/approvals/blocked-modification-plan.md",
+                    "created_at": "now",
+                    "updated_at": "now",
+                }
+            ],
+        },
+    )
+    client = TestClient(main.app)
+    response = client.get("/projects/project-1/approvals")
+
+    assert response.status_code == 200
+    assert response.json()["approvals"][0]["approval_type"] == "modification_plan"
+
+
 def assert_exists(root: Path, relative_path: str) -> None:
     assert (root / relative_path).exists(), relative_path
