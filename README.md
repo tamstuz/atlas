@@ -2,7 +2,7 @@
 
 AI Lab Orchestrator is a repo-based installer that turns a fresh Ubuntu Server 24.04 minimal VM into an AI Lab control plane.
 
-v0.7 provides a basic working orchestrator:
+v0.8 provides a basic working orchestrator:
 
 - FastAPI front-door API
 - LangGraph workflow scaffold
@@ -32,6 +32,10 @@ v0.7 provides a basic working orchestrator:
 - deterministic patch, command plan, and rollback plan validation without execution
 - project-local sandbox run endpoint for approved, dry-run-passed plans
 - sandbox artifacts, command logs, and file manifests under each project
+- production change package generation after approved dry-run and sandbox validation
+- human execution, rollback, pre-flight, and post-change checklists
+- exact command plan documents for human review only
+- final human approval records for package review only
 
 Ollama is not installed by this repo and may run on another server.
 
@@ -206,6 +210,32 @@ Sandbox artifacts are written under:
 
 The sandbox copies approved inputs into `sandbox/input/`, applies safe candidate patches only inside `sandbox/workspace/`, and blocks production mutation paths. Sandbox command execution is disabled by default; when explicitly enabled, only narrow validation commands can run with the sandbox as the working directory.
 
+## Production Change Package
+
+v0.8 adds production change packaging after approval, passed dry-run validation, and passed sandbox validation:
+
+```bash
+curl -X POST http://localhost:8088/projects/<project-id>/approvals/<approval-id>/change-package \
+  -H "Content-Type: application/json" \
+  -d '{"change_window":"Sunday 01:00 UTC","operator":"ops","notes":"review only"}'
+
+curl http://localhost:8088/projects/<project-id>/change-packages
+```
+
+Change package artifacts are written under:
+
+- `/srv/ai-lab/projects/<project-id>/change-package/production-change-package.md`
+- `/srv/ai-lab/projects/<project-id>/change-package/production-change-package.json`
+- `/srv/ai-lab/projects/<project-id>/change-package/human-execution-checklist.md`
+- `/srv/ai-lab/projects/<project-id>/change-package/exact-command-plan.md`
+- `/srv/ai-lab/projects/<project-id>/change-package/rollback-checklist.md`
+- `/srv/ai-lab/projects/<project-id>/change-package/preflight-checklist.md`
+- `/srv/ai-lab/projects/<project-id>/change-package/postchange-checklist.md`
+- `/srv/ai-lab/projects/<project-id>/change-package/final-approval-request.json`
+- `/srv/ai-lab/projects/<project-id>/change-package/source-artifact-manifest.json`
+
+Source artifacts are copied into `change-package/source/` when present. The exact command plan is marked human-only, dangerous commands are classified as `blocked_for_agent`, and no command execution service is called. v0.8 creates a final `production_change_package` approval record with status `pending`; this is review of the package only, not execution approval.
+
 ## External Ollama Configuration
 
 Set the external endpoint in `.env`:
@@ -234,12 +264,13 @@ curl http://localhost:8088/llm/status
 
 ## Known Limitations
 
-- v0.7 has no web UI.
-- v0.7 has no authentication system.
-- v0.7 does not implement autonomous self-improvement.
-- v0.7 does not implement production skill or harness promotion automation.
+- v0.8 has no web UI.
+- v0.8 has no authentication system.
+- v0.8 does not implement autonomous self-improvement.
+- v0.8 does not implement production skill or harness promotion automation.
+- v0.8 does not implement production command execution.
 - The worker runner service is a placeholder.
 - Specialist output is deterministic placeholder content when no external LLM is available.
 - LLM prompts and responses are stored in `agent_runs` JSONB input/output fields.
 - Runtime inspector creates read-only inspection artifacts only; it does not edit cron or services.
-- Modification planning, dry-run validation, and sandbox validation do not apply production patches, edit cron, edit systemd, restart services, use sudo, mutate global registries, or mutate `harness/prod`.
+- Modification planning, dry-run validation, sandbox validation, and change packaging do not apply production patches, edit cron, edit systemd, restart services, use sudo, mutate global registries, or mutate `harness/prod`.

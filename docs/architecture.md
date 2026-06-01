@@ -9,6 +9,7 @@ v0.4 adds `POST /projects/{project_id}/runtime-inspect` for read-only runtime in
 v0.5 adds `POST /projects/{project_id}/modification-plan` and `GET /projects/{project_id}/approvals` for approval-gated planning.
 v0.6 adds `POST /projects/{project_id}/approvals/{approval_id}/status` for human approval transitions and `POST /projects/{project_id}/approvals/{approval_id}/dry-run` for approved dry-run validation.
 v0.7 adds `POST /projects/{project_id}/approvals/{approval_id}/sandbox-run` for project-local sandbox validation after approval and passing dry-run validation.
+v0.8 adds `POST /projects/{project_id}/approvals/{approval_id}/change-package` for human-reviewed production change package generation after approval, passed dry-run validation, and passed sandbox validation. It also adds `GET /projects/{project_id}/change-packages` for package records.
 
 LangGraph is the workflow layer. v0.2 runs intake, analyst, architect, developer, QA, and final report. The stable LangGraph `thread_id` is the project id.
 
@@ -37,3 +38,5 @@ The approval transition service moves approval records from `pending` or `blocke
 The dry-run validation service requires an approved approval record. It reads the project-local modification plan and `dry-run.patch`, validates patch targets, classifies proposed commands without running them, checks rollback plan completeness, writes validation artifacts under the project `approvals/` directory, updates approval validation metadata, and records audit events. It does not apply patches, edit cron, edit systemd, restart services, use sudo, mutate `harness/prod`, or mutate global runtime registries.
 
 The sandbox service requires an approved approval record and a passed dry-run validation result. It creates `/srv/ai-lab/projects/<project-id>/sandbox/`, copies approved artifacts into `sandbox/input/`, applies safe candidate patches only under `sandbox/workspace/`, validates sandbox command plans, records command logs and file manifests, writes sandbox reports, and records events. It never mounts or mutates production paths, global runtime registries, or `harness/prod`.
+
+The change package service requires an approved approval record, a passed dry-run validation result, and a passed sandbox validation result. It writes package artifacts under `/srv/ai-lab/projects/<project-id>/change-package/`, copies source artifacts into `change-package/source/`, classifies exact commands for human review only, creates a final `production_change_package` approval record with status `pending`, and records package events. It does not call shell execution services, apply production patches, edit cron, edit systemd, restart services, use sudo, mutate global runtime registries, or mutate `harness/prod`.
