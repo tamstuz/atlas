@@ -220,6 +220,8 @@ def test_dry_run_endpoint(monkeypatch):
 
 
 def test_sandbox_run_endpoint(monkeypatch):
+    project_id = "4ffb8ad4-f175-4b91-9ab3-2248a5bb4c65"
+    approval_id = "e00ba000-e9cf-4a32-9440-b236ea0356c8"
     monkeypatch.setattr(
         main,
         "run_sandbox",
@@ -241,11 +243,13 @@ def test_sandbox_run_endpoint(monkeypatch):
     )
     client = TestClient(main.app)
     response = client.post(
-        "/projects/project-1/approvals/approval-1/sandbox-run",
+        f"/projects/{project_id}/approvals/{approval_id}/sandbox-run",
         json={"sandbox_mode": "full_sandbox", "allow_sandbox_commands": False},
     )
 
     assert response.status_code == 200
+    assert response.json()["project_id"] == project_id
+    assert response.json()["approval_id"] == approval_id
     assert response.json()["sandbox_path"].endswith("/sandbox")
     assert response.json()["production_modified"] is False
 

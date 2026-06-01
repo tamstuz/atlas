@@ -104,6 +104,12 @@ fi
 
 mkdir -p "${AI_LAB_ROOT}"
 tar -C "${REPO_DIR}" --exclude ".git" --exclude ".venv" -cf - . | tar -C "${AI_LAB_ROOT}" -xf -
+find "${AI_LAB_ROOT}/orchestrator" -type d -name "__pycache__" -prune -exec rm -rf {} +
+
+if ! grep -Fq '"/projects/{project_id}/approvals/{approval_id}/sandbox-run"' "${AI_LAB_ROOT}/orchestrator/app/main.py"; then
+  echo "Deployed FastAPI app is missing the v0.7 sandbox-run route."
+  exit 1
+fi
 
 cd "${AI_LAB_ROOT}"
 
