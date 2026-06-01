@@ -254,5 +254,63 @@ def test_sandbox_run_endpoint(monkeypatch):
     assert response.json()["production_modified"] is False
 
 
+def test_change_package_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "generate_change_package",
+        lambda project_id, approval_id, payload: {
+            "project_id": project_id,
+            "approval_id": approval_id,
+            "status": "packaged",
+            "change_package_path": "/srv/ai-lab/projects/project-1/change-package/production-change-package.md",
+            "execution_checklist_path": "/srv/ai-lab/projects/project-1/change-package/human-execution-checklist.md",
+            "rollback_checklist_path": "/srv/ai-lab/projects/project-1/change-package/rollback-checklist.md",
+            "preflight_checklist_path": "/srv/ai-lab/projects/project-1/change-package/preflight-checklist.md",
+            "postchange_checklist_path": "/srv/ai-lab/projects/project-1/change-package/postchange-checklist.md",
+            "final_approval_id": "final-approval-1",
+            "production_modified": False,
+            "global_registries_modified": False,
+            "harness_modified": False,
+            "issues": [],
+            "next_step": "Human review required.",
+        },
+    )
+    client = TestClient(main.app)
+    response = client.post(
+        "/projects/project-1/approvals/approval-1/change-package",
+        json={"change_window": "Sunday 01:00 UTC", "operator": "ops", "notes": "review only"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "packaged"
+    assert response.json()["production_modified"] is False
+    assert response.json()["final_approval_id"] == "final-approval-1"
+
+
+def test_change_packages_endpoint(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "list_change_packages",
+        lambda project_id: {
+            "project_id": project_id,
+            "change_packages": [
+                {
+                    "approval_id": "approval-1",
+                    "final_approval_id": "final-approval-1",
+                    "status": "pending",
+                    "artifact_path": "/srv/ai-lab/projects/project-1/change-package/production-change-package.md",
+                    "created_at": "now",
+                    "updated_at": "now",
+                }
+            ],
+        },
+    )
+    client = TestClient(main.app)
+    response = client.get("/projects/project-1/change-packages")
+
+    assert response.status_code == 200
+    assert response.json()["change_packages"][0]["final_approval_id"] == "final-approval-1"
+
+
 def assert_exists(root: Path, relative_path: str) -> None:
     assert (root / relative_path).exists(), relative_path

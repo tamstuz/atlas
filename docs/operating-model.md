@@ -85,3 +85,19 @@ POST /projects/{project_id}/approvals/{approval_id}/sandbox-run
 The service requires approval status `approved` and a prior `dry-run-validation-result.json` with status `passed`. It creates a deterministic project-local sandbox under `/srv/ai-lab/projects/<project-id>/sandbox/`, copies approved input artifacts into `sandbox/input/`, applies safe candidate patches only inside `sandbox/workspace/`, writes sandbox logs and manifests, and records audit events.
 
 Command execution is disabled by default with `allow_sandbox_commands=false`. When enabled, only narrow sandbox-local validation commands are allowed. v0.7 still has no production modification or promotion path.
+
+## v0.8 Production Change Packaging
+
+Production change packaging is invoked explicitly:
+
+```text
+POST /projects/{project_id}/approvals/{approval_id}/change-package
+```
+
+The service requires the original approval record to be `approved`, `dry-run-validation-result.json` to have status `passed`, and `sandbox-run-result.json` to have status `passed`. If any prerequisite is missing or not passed, the response is `blocked` and no package is created.
+
+When prerequisites pass, v0.8 writes a package under `/srv/ai-lab/projects/<project-id>/change-package/`, including the production change package, JSON package payload, human execution checklist, exact command plan, rollback checklist, pre-flight checklist, post-change checklist, final approval request, source artifact manifest, and copied source artifacts.
+
+The final approval record has `approval_type=production_change_package` and `status=pending`. It means the human-reviewed package is awaiting review only. It is not approval to execute production changes.
+
+Exact commands are written for human review only. Dangerous commands such as `sudo`, service restarts, package installation, deletion, ownership/mode changes, Docker execution, and production copies are marked `blocked_for_agent` and `human_only`. v0.8 has no production execution endpoint.
