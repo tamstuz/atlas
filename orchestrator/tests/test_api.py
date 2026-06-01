@@ -219,5 +219,40 @@ def test_dry_run_endpoint(monkeypatch):
     assert response.json()["production_modified"] is False
 
 
+def test_sandbox_run_endpoint(monkeypatch):
+    project_id = "4ffb8ad4-f175-4b91-9ab3-2248a5bb4c65"
+    approval_id = "e00ba000-e9cf-4a32-9440-b236ea0356c8"
+    monkeypatch.setattr(
+        main,
+        "run_sandbox",
+        lambda project_id, approval_id, payload: {
+            "project_id": project_id,
+            "approval_id": approval_id,
+            "status": "passed",
+            "sandbox_path": "/srv/ai-lab/projects/project-1/sandbox",
+            "sandbox_report_path": "/srv/ai-lab/projects/project-1/sandbox/sandbox-run-report.md",
+            "sandbox_result_path": "/srv/ai-lab/projects/project-1/sandbox/sandbox-run-result.json",
+            "production_modified": False,
+            "global_registries_modified": False,
+            "harness_modified": False,
+            "commands_executed": [],
+            "commands_blocked": [],
+            "issues": [],
+            "next_step": "Sandbox validation passed; v0.7 still does not modify production.",
+        },
+    )
+    client = TestClient(main.app)
+    response = client.post(
+        f"/projects/{project_id}/approvals/{approval_id}/sandbox-run",
+        json={"sandbox_mode": "full_sandbox", "allow_sandbox_commands": False},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["project_id"] == project_id
+    assert response.json()["approval_id"] == approval_id
+    assert response.json()["sandbox_path"].endswith("/sandbox")
+    assert response.json()["production_modified"] is False
+
+
 def assert_exists(root: Path, relative_path: str) -> None:
     assert (root / relative_path).exists(), relative_path

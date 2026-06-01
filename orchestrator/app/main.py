@@ -14,14 +14,16 @@ from .schemas.approval_status import (
 from .schemas.modification_plan import ApprovalsResponse, ModificationPlanRequest, ModificationPlanResponse
 from .schemas.project_state import ProjectCreate, ProjectRead, ProjectState
 from .schemas.runtime_inspection import RuntimeInspectRequest, RuntimeInspectResponse
+from .schemas.sandbox_run import SandboxRunRequest, SandboxRunResponse
 from .services.approval_transition_service import ApprovalTransitionError, transition_approval_status
 from .services.dry_run_validation_service import DryRunValidationError, run_dry_run_validation
 from .services.project_service import ProjectCreationError, create_project, get_project
 from .services.modification_planning_service import create_modification_plan, list_project_approvals
 from .services.runtime_inspection_service import run_runtime_inspection
+from .services.sandbox_service import SandboxRunError, run_sandbox
 from .services.workflow_service import run_project_workflow
 
-app = FastAPI(title="AI Lab Orchestrator", version="0.6.0")
+app = FastAPI(title="AI Lab Orchestrator", version="0.7.0")
 logger = logging.getLogger(__name__)
 
 
@@ -139,6 +141,22 @@ def post_approval_dry_run(
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Project or approval not found") from exc
     except DryRunValidationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except DatabaseUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/projects/{project_id}/approvals/{approval_id}/sandbox-run", response_model=SandboxRunResponse)
+def post_approval_sandbox_run(
+    project_id: str,
+    approval_id: str,
+    payload: SandboxRunRequest | None = None,
+) -> SandboxRunResponse:
+    try:
+        return run_sandbox(project_id, approval_id, payload or SandboxRunRequest())
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Project or approval not found") from exc
+    except SandboxRunError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except DatabaseUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

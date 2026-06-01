@@ -2,7 +2,7 @@
 
 AI Lab Orchestrator is a repo-based installer that turns a fresh Ubuntu Server 24.04 minimal VM into an AI Lab control plane.
 
-v0.6 provides a basic working orchestrator:
+v0.7 provides a basic working orchestrator:
 
 - FastAPI front-door API
 - LangGraph workflow scaffold
@@ -30,6 +30,8 @@ v0.6 provides a basic working orchestrator:
 - approval status transitions for pending or blocked approval records
 - approved dry-run validation for candidate plans and patches
 - deterministic patch, command plan, and rollback plan validation without execution
+- project-local sandbox run endpoint for approved, dry-run-passed plans
+- sandbox artifacts, command logs, and file manifests under each project
 
 Ollama is not installed by this repo and may run on another server.
 
@@ -184,6 +186,26 @@ Dry-run validation writes:
 
 The validator reads the candidate plan and `dry-run.patch`, classifies proposed commands, checks rollback plan completeness, records events, and never applies patches or runs modifying commands.
 
+## Sandboxed Plan Validation
+
+v0.7 adds project-local sandbox validation after approval and passing dry-run validation:
+
+```bash
+curl -X POST http://localhost:8088/projects/<project-id>/approvals/<approval-id>/sandbox-run \
+  -H "Content-Type: application/json" \
+  -d '{"sandbox_mode":"full_sandbox","allow_sandbox_commands":false}'
+```
+
+Sandbox artifacts are written under:
+
+- `/srv/ai-lab/projects/<project-id>/sandbox/sandbox-run-report.md`
+- `/srv/ai-lab/projects/<project-id>/sandbox/sandbox-run-result.json`
+- `/srv/ai-lab/projects/<project-id>/sandbox/sandbox-command-log.json`
+- `/srv/ai-lab/projects/<project-id>/sandbox/sandbox-file-manifest.json`
+- `/srv/ai-lab/projects/<project-id>/sandbox/applied.patch`
+
+The sandbox copies approved inputs into `sandbox/input/`, applies safe candidate patches only inside `sandbox/workspace/`, and blocks production mutation paths. Sandbox command execution is disabled by default; when explicitly enabled, only narrow validation commands can run with the sandbox as the working directory.
+
 ## External Ollama Configuration
 
 Set the external endpoint in `.env`:
@@ -212,12 +234,12 @@ curl http://localhost:8088/llm/status
 
 ## Known Limitations
 
-- v0.6 has no web UI.
-- v0.6 has no authentication system.
-- v0.6 does not implement autonomous self-improvement.
-- v0.6 does not implement production skill or harness promotion automation.
+- v0.7 has no web UI.
+- v0.7 has no authentication system.
+- v0.7 does not implement autonomous self-improvement.
+- v0.7 does not implement production skill or harness promotion automation.
 - The worker runner service is a placeholder.
 - Specialist output is deterministic placeholder content when no external LLM is available.
 - LLM prompts and responses are stored in `agent_runs` JSONB input/output fields.
 - Runtime inspector creates read-only inspection artifacts only; it does not edit cron or services.
-- Modification planning and dry-run validation create candidate artifacts only; they do not apply patches, run commands, edit cron, edit systemd, restart services, use sudo, mutate global registries, or mutate `harness/prod`.
+- Modification planning, dry-run validation, and sandbox validation do not apply production patches, edit cron, edit systemd, restart services, use sudo, mutate global registries, or mutate `harness/prod`.
