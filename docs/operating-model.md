@@ -73,3 +73,15 @@ POST /projects/{project_id}/approvals/{approval_id}/dry-run
 ```
 
 The service requires approval status `approved`. It loads the approval artifacts, validates the candidate patch structure without applying it, classifies proposed commands without running them, checks rollback plan completeness, writes dry-run validation artifacts under the project `approvals/` folder, and records audit events. v0.6 still has no real execution path.
+
+## v0.7 Sandboxed Plan Validation
+
+Sandbox validation is invoked explicitly:
+
+```text
+POST /projects/{project_id}/approvals/{approval_id}/sandbox-run
+```
+
+The service requires approval status `approved` and a prior `dry-run-validation-result.json` with status `passed`. It creates a deterministic project-local sandbox under `/srv/ai-lab/projects/<project-id>/sandbox/`, copies approved input artifacts into `sandbox/input/`, applies safe candidate patches only inside `sandbox/workspace/`, writes sandbox logs and manifests, and records audit events.
+
+Command execution is disabled by default with `allow_sandbox_commands=false`. When enabled, only narrow sandbox-local validation commands are allowed. v0.7 still has no production modification or promotion path.
